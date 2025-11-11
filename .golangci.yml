@@ -17,10 +17,17 @@ run:
 
 formatters:
   enable:
+    - gofumpt # stricter gofmt
     - goimports # checks if the code and import statements are formatted
     - golines # checks if code is formatted, and fixes long lines
 
 settings:
+  gofumpt:
+    # Choose whether to use the extra rules
+    extra-rules: true
+    # Choose whether to use the module path
+    module-path: github.com/dexfra-fun/x402-go
+    
   goimports:
     # Prefixes for local packages
     local-prefixes:
