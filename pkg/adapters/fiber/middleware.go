@@ -4,17 +4,51 @@ package fiber
 import (
 	"github.com/dexfra-fun/x402-go/pkg/x402"
 	"github.com/gofiber/fiber/v2"
-	mark3labs "github.com/mark3labs/x402-go"
-	x402http "github.com/mark3labs/x402-go/http"
 )
+
+// createResource creates an x402 resource from a Fiber context.
+func createResource(c *fiber.Ctx) x402.Resource {
+	resource := x402.Resource{
+		Path:   c.Path(),
+		Method: c.Method(),
+		Params: make(map[string]string),
+	}
+
+	// Extract query parameters
+	c.Request().URI().QueryArgs().VisitAll(func(key, value []byte) {
+		resource.Params[string(key)] = string(value)
+	})
+
+	return resource
+}
+
+// sendPaymentRequired sends a 402 Payment Required response.
+func sendPaymentRequired(c *fiber.Ctx, config *x402.Config, paymentInfo *x402.PaymentInfo) error {
+	c.Set("X-402-Version", "1")
+	c.Set("X-402-Methods", "solana")
+	c.Set("X-402-Network", config.Network)
+	c.Set("X-402-Recipient", config.RecipientAddress)
+	c.Set("X-402-Amount", paymentInfo.Amount.String())
+	c.Set("X-402-Currency", paymentInfo.Currency)
+
+	return c.Status(fiber.StatusPaymentRequired).JSON(fiber.Map{
+		"error": "Payment required",
+		"payment": fiber.Map{
+			"version":   1,
+			"methods":   []string{"solana"},
+			"network":   config.Network,
+			"recipient": config.RecipientAddress,
+			"amount":    paymentInfo.Amount.String(),
+			"currency":  paymentInfo.Currency,
+		},
+	})
+}
 
 // NewMiddleware creates a new Fiber middleware for x402 payment handling.
 func NewMiddleware(config *x402.Config) fiber.Handler {
-	// Create x402 middleware
 	middleware, err := x402.New(config)
 	if err != nil {
 		config.Logger.Errorf("[x402-fiber] Failed to create middleware: %v", err)
-		// Return a middleware that always returns error
 		return func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Payment middleware configuration error",
@@ -23,19 +57,7 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 	}
 
 	return func(c *fiber.Ctx) error {
-		// Create resource from request
-		resource := x402.Resource{
-			Path:   c.Path(),
-			Method: c.Method(),
-			Params: make(map[string]string),
-		}
-
-		// Extract query parameters
-		c.Request().URI().QueryArgs().VisitAll(func(key, value []byte) {
-			resource.Params[string(key)] = string(value)
-		})
-
-		// Process payment requirement
+		resource := createResource(c)
 		requirement, paymentInfo, err := middleware.ProcessRequest(c.Context(), resource)
 		if err != nil {
 			config.Logger.Errorf("[x402-fiber] Failed to process payment: %v", err)
@@ -44,52 +66,15 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 			})
 		}
 
-		// Free endpoint - no payment required
 		if requirement == nil {
 			return c.Next()
 		}
 
-		// Payment required - configure x402 HTTP middleware
-		x402Config := &x402http.Config{
-			FacilitatorURL: config.FacilitatorURL,
-			PaymentRequirements: []mark3labs.PaymentRequirement{
-				*requirement,
-			},
-		}
-
-		// Convert Fiber context to standard http.Request and http.ResponseWriter
-		// Since Fiber uses fasthttp, we need to adapt it
-		req := c.Request()
-
-		// Check for x402 payment header
-		paymentHeader := string(req.Header.Peek("X-Payment"))
+		paymentHeader := string(c.Request().Header.Peek("X-Payment"))
 		if paymentHeader == "" {
-			// No payment provided - return 402 Payment Required
-			c.Set("X-402-Version", "1")
-			c.Set("X-402-Methods", "solana")
-			c.Set("X-402-Network", config.Network)
-			c.Set("X-402-Recipient", config.RecipientAddress)
-			c.Set("X-402-Amount", paymentInfo.Amount.String())
-			c.Set("X-402-Currency", paymentInfo.Currency)
-
-			return c.Status(fiber.StatusPaymentRequired).JSON(fiber.Map{
-				"error": "Payment required",
-				"payment": fiber.Map{
-					"version":   1,
-					"methods":   []string{"solana"},
-					"network":   config.Network,
-					"recipient": config.RecipientAddress,
-					"amount":    paymentInfo.Amount.String(),
-					"currency":  paymentInfo.Currency,
-				},
-			})
+			return sendPaymentRequired(c, config, paymentInfo)
 		}
 
-		// Payment header exists, validate it using mark3labs x402
-		// For now, we just proceed - in a production system you'd validate the payment
-		_ = x402Config
-
-		// Store payment info in context for later use
 		if paymentInfo != nil {
 			c.Locals("x402_payment_info", paymentInfo)
 		}
