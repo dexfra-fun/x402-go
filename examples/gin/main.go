@@ -8,6 +8,7 @@ import (
 	"github.com/dexfra-fun/x402-go/pkg/x402"
 	ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
@@ -29,12 +30,12 @@ func main() {
 		facilitatorURL = "https://facilitator.payai.network" // default
 	}
 
-	// Configure x402 middleware with fixed pricing
+	// Configure x402 middleware with fixed pricing (0.001 USDC per call)
 	config := &x402.Config{
 		RecipientAddress: recipientAddress,
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
-		PricingStrategy:  pricing.NewFixed(0.001), // 0.001 USDC per call
+		PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.001")),
 	}
 
 	// Free endpoint - no payment required
@@ -51,8 +52,8 @@ func main() {
 		protected.GET("/data", func(c *gin.Context) {
 			// Get payment info if needed
 			if paymentInfo, ok := ginx402.GetPaymentInfo(c); ok {
-				log.Printf("Payment received: %.6f %s from %s",
-					paymentInfo.Amount, paymentInfo.Currency, paymentInfo.Recipient)
+				log.Printf("Payment received: %s %s from %s",
+					paymentInfo.Amount.String(), paymentInfo.Currency, paymentInfo.Recipient)
 			}
 
 			c.JSON(200, gin.H{

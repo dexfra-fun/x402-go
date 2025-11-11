@@ -5,30 +5,44 @@ import (
 	"testing"
 
 	"github.com/dexfra-fun/x402-go/pkg/x402"
+	"github.com/shopspring/decimal"
 )
 
 func TestFixed(t *testing.T) {
 	tests := []struct {
 		name     string
-		amount   float64
-		expected float64
+		amount   string
+		expected string
 	}{
-		{"zero", 0, 0},
-		{"small", 0.001, 0.001},
-		{"large", 10.5, 10.5},
+		{"zero", "0", "0"},
+		{"small", "0.001", "0.001"},
+		{"large", "10.5", "10.5"},
+		{"precise", "0.123456789", "0.123456789"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewFixed(tt.amount)
+			amount := decimal.RequireFromString(tt.amount)
+			p := NewFixed(amount)
 			got, err := p.GetPrice(context.Background(), x402.Resource{})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if got != tt.expected {
-				t.Errorf("expected %f, got %f", tt.expected, got)
+			if got.String() != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, got.String())
 			}
 		})
+	}
+}
+
+func TestFixedFromFloat(t *testing.T) {
+	p := NewFixedFromFloat(0.001)
+	got, err := p.GetPrice(context.Background(), x402.Resource{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.String() != "0.001" {
+		t.Errorf("expected 0.001, got %s", got.String())
 	}
 }
 
@@ -37,16 +51,16 @@ func TestPathBased(t *testing.T) {
 		"/api/data":    0.001,
 		"/api/premium": 0.01,
 	}
-	p := NewPathBased(prices, 0.005)
+	p := NewPathBasedFromFloat(prices, 0.005)
 
 	tests := []struct {
 		name     string
 		path     string
-		expected float64
+		expected string
 	}{
-		{"exact match data", "/api/data", 0.001},
-		{"exact match premium", "/api/premium", 0.01},
-		{"default", "/api/other", 0.005},
+		{"exact match data", "/api/data", "0.001"},
+		{"exact match premium", "/api/premium", "0.01"},
+		{"default", "/api/other", "0.005"},
 	}
 
 	for _, tt := range tests {
@@ -56,8 +70,8 @@ func TestPathBased(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if got != tt.expected {
-				t.Errorf("expected %f, got %f", tt.expected, got)
+			if got.String() != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, got.String())
 			}
 		})
 	}
@@ -68,16 +82,16 @@ func TestMethodBased(t *testing.T) {
 		"GET":  0.001,
 		"POST": 0.005,
 	}
-	p := NewMethodBased(prices, 0.002)
+	p := NewMethodBasedFromFloat(prices, 0.002)
 
 	tests := []struct {
 		name     string
 		method   string
-		expected float64
+		expected string
 	}{
-		{"GET", "GET", 0.001},
-		{"POST", "POST", 0.005},
-		{"default PUT", "PUT", 0.002},
+		{"GET", "GET", "0.001"},
+		{"POST", "POST", "0.005"},
+		{"default PUT", "PUT", "0.002"},
 	}
 
 	for _, tt := range tests {
@@ -87,8 +101,8 @@ func TestMethodBased(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if got != tt.expected {
-				t.Errorf("expected %f, got %f", tt.expected, got)
+			if got.String() != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, got.String())
 			}
 		})
 	}

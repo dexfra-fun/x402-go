@@ -9,6 +9,7 @@ import (
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
 	"github.com/dexfra-fun/x402-go/pkg/x402"
 	httpx402 "github.com/dexfra-fun/x402-go/pkg/adapters/http"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
@@ -33,12 +34,12 @@ func main() {
 		RecipientAddress: recipientAddress,
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
-		PricingStrategy: pricing.NewMethodBased(map[string]float64{
-			"GET":    0.001, // 0.001 USDC for reads
-			"POST":   0.005, // 0.005 USDC for writes
-			"PUT":    0.005, // 0.005 USDC for updates
-			"DELETE": 0.01,  // 0.01 USDC for deletes
-		}, 0.001), // default: 0.001 USDC
+		PricingStrategy: pricing.NewMethodBased(map[string]decimal.Decimal{
+			"GET":    decimal.RequireFromString("0.001"), // 0.001 USDC for reads
+			"POST":   decimal.RequireFromString("0.005"), // 0.005 USDC for writes
+			"PUT":    decimal.RequireFromString("0.005"), // 0.005 USDC for updates
+			"DELETE": decimal.RequireFromString("0.01"),  // 0.01 USDC for deletes
+		}, decimal.RequireFromString("0.001")), // default: 0.001 USDC
 	}
 
 	mux := http.NewServeMux()
@@ -55,8 +56,8 @@ func main() {
 	mux.HandleFunc("/api/data", func(w http.ResponseWriter, r *http.Request) {
 		// Get payment info if needed
 		if paymentInfo, ok := httpx402.GetPaymentInfo(r.Context()); ok {
-			log.Printf("Payment received: %.6f %s from %s",
-				paymentInfo.Amount, paymentInfo.Currency, paymentInfo.Recipient)
+			log.Printf("Payment received: %s %s from %s",
+				paymentInfo.Amount.String(), paymentInfo.Currency, paymentInfo.Recipient)
 		}
 
 		w.Header().Set("Content-Type", "application/json")

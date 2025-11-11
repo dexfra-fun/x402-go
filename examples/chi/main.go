@@ -11,6 +11,7 @@ import (
 	chix402 "github.com/dexfra-fun/x402-go/pkg/adapters/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
@@ -41,11 +42,11 @@ func main() {
 		RecipientAddress: recipientAddress,
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
-		PricingStrategy: pricing.NewPathBased(map[string]float64{
-			"/api/data":    0.001, // 0.001 USDC
-			"/api/premium": 0.01,  // 0.01 USDC
-			"/api/action":  0.005, // 0.005 USDC
-		}, 0.001), // default: 0.001 USDC
+		PricingStrategy: pricing.NewPathBased(map[string]decimal.Decimal{
+			"/api/data":    decimal.RequireFromString("0.001"),  // 0.001 USDC
+			"/api/premium": decimal.RequireFromString("0.01"),   // 0.01 USDC
+			"/api/action":  decimal.RequireFromString("0.005"),  // 0.005 USDC
+		}, decimal.RequireFromString("0.001")), // default: 0.001 USDC
 	}
 
 	// Free endpoint - no payment required
@@ -64,8 +65,8 @@ func main() {
 		r.Get("/data", func(w http.ResponseWriter, r *http.Request) {
 			// Get payment info if needed
 			if paymentInfo, ok := chix402.GetPaymentInfo(r.Context()); ok {
-				log.Printf("Payment received: %.6f %s from %s",
-					paymentInfo.Amount, paymentInfo.Currency, paymentInfo.Recipient)
+				log.Printf("Payment received: %s %s from %s",
+					paymentInfo.Amount.String(), paymentInfo.Currency, paymentInfo.Recipient)
 			}
 
 			w.Header().Set("Content-Type", "application/json")

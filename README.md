@@ -33,6 +33,7 @@ import (
     ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
     "github.com/dexfra-fun/x402-go/pkg/pricing"
     "github.com/gin-gonic/gin"
+    "github.com/shopspring/decimal"
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
         RecipientAddress: "YOUR_WALLET_ADDRESS",
         Network:          "solana-devnet",
         FacilitatorURL:   "https://facilitator.payai.network",
-        PricingStrategy:  pricing.NewFixed(0.001), // 0.001 USDC per call
+        PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.001")), // 0.001 USDC
     }
     
     // Apply middleware to protected routes
@@ -128,17 +129,22 @@ func main() {
 Implement custom pricing logic:
 
 ```go
+import "github.com/shopspring/decimal"
+
 type DatabasePricer struct {
     db *sql.DB
 }
 
-func (p *DatabasePricer) GetPrice(ctx context.Context, resource x402.Resource) (float64, error) {
-    var price float64
+func (p *DatabasePricer) GetPrice(ctx context.Context, resource x402.Resource) (decimal.Decimal, error) {
+    var priceStr string
     err := p.db.QueryRowContext(ctx, 
         "SELECT price FROM api_pricing WHERE path = ? AND method = ?",
         resource.Path, resource.Method,
-    ).Scan(&price)
-    return price, err
+    ).Scan(&priceStr)
+    if err != nil {
+        return decimal.Zero, err
+    }
+    return decimal.NewFromString(priceStr)
 }
 
 // Use it

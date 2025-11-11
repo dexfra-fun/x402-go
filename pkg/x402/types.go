@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/mark3labs/x402-go"
+	"github.com/shopspring/decimal"
 )
 
 // PricingStrategy defines how to price API resources
 type PricingStrategy interface {
-	GetPrice(ctx context.Context, resource Resource) (float64, error)
+	GetPrice(ctx context.Context, resource Resource) (decimal.Decimal, error)
 }
 
 // Resource represents an API endpoint being accessed
@@ -80,7 +81,7 @@ func (c *Config) Validate() error {
 
 // PaymentInfo contains payment metadata
 type PaymentInfo struct {
-	Amount    float64
+	Amount    decimal.Decimal
 	Currency  string
 	Recipient string
 	FeePayer  string

@@ -3,11 +3,11 @@ package x402
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/mark3labs/x402-go"
 	"github.com/mr-tron/base58"
+	"github.com/shopspring/decimal"
 )
 
 // Middleware handles x402 payment verification
@@ -57,12 +57,12 @@ func (m *Middleware) ProcessRequest(ctx context.Context, resource Resource) (*x4
 	}
 
 	// Free endpoint - no payment required
-	if price <= 0 {
+	if price.LessThanOrEqual(decimal.Zero) {
 		return nil, nil, nil
 	}
 
-	m.config.Logger.Printf("[x402] Payment required: path=%s method=%s price=%.6f USDC",
-		resource.Path, resource.Method, price)
+	m.config.Logger.Printf("[x402] Payment required: path=%s method=%s price=%s USDC",
+		resource.Path, resource.Method, price.String())
 
 	// Get fee payer from facilitator
 	feePayer, err := m.facilitator.GetFeePayer(ctx, m.config.Network)
@@ -77,8 +77,8 @@ func (m *Middleware) ProcessRequest(ctx context.Context, resource Resource) (*x4
 		return nil, nil, ErrInvalidFeePayer
 	}
 
-	// Convert price to string with appropriate precision
-	amountStr := strconv.FormatFloat(price, 'f', -1, 64)
+	// Convert price to string
+	amountStr := price.String()
 
 	// Create USDC payment requirement
 	requirement, err := x402.NewUSDCPaymentRequirement(x402.USDCRequirementConfig{
