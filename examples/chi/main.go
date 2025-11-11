@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -26,10 +27,10 @@ const (
 	sampleHumidity    = 60
 )
 
-func getConfig() *x402.Config {
+func getConfig() (*x402.Config, error) {
 	recipientAddress := os.Getenv("X402_RECIPIENT_ADDRESS")
 	if recipientAddress == "" {
-		log.Fatal("X402_RECIPIENT_ADDRESS environment variable is required")
+		return nil, errors.New("X402_RECIPIENT_ADDRESS environment variable is required")
 	}
 
 	network := os.Getenv("X402_NETWORK")
@@ -51,7 +52,7 @@ func getConfig() *x402.Config {
 			"/api/premium": decimal.RequireFromString("0.01"),  // 0.01 USDC
 			"/api/action":  decimal.RequireFromString("0.005"), // 0.005 USDC
 		}, decimal.RequireFromString("0.001")), // default: 0.001 USDC
-	}
+	}, nil
 }
 
 func setupRoutes(r chi.Router, config *x402.Config) {
@@ -78,9 +79,9 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]any{
 				"message": "This is protected data",
-				"data": map[string]interface{}{
+				"data": map[string]any{
 					"temperature": sampleTemperature,
 					"humidity":    sampleHumidity,
 					"timestamp":   "2025-01-01T00:00:00Z",
@@ -92,7 +93,7 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 
 		r.Get("/premium", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]any{
 				"message": "This is premium content",
 				"content": "Secret information only available after payment",
 			}); err != nil {
@@ -101,14 +102,14 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 		})
 
 		r.Post("/action", func(w http.ResponseWriter, r *http.Request) {
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				http.Error(w, "Invalid request body", http.StatusBadRequest)
 				return
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]any{
 				"message": "Action performed successfully",
 				"result":  body,
 			}); err != nil {
@@ -126,7 +127,10 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	// Get configuration and setup routes
-	config := getConfig()
+	config, err := getConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	setupRoutes(r, config)
 
 	log.Printf("Starting server on %s", serverPort)

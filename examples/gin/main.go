@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 
@@ -19,10 +20,10 @@ const (
 	sampleHumidity       = 60
 )
 
-func getConfig() *x402.Config {
+func getConfig() (*x402.Config, error) {
 	recipientAddress := os.Getenv("X402_RECIPIENT_ADDRESS")
 	if recipientAddress == "" {
-		log.Fatal("X402_RECIPIENT_ADDRESS environment variable is required")
+		return nil, errors.New("X402_RECIPIENT_ADDRESS environment variable is required")
 	}
 
 	network := os.Getenv("X402_NETWORK")
@@ -40,7 +41,7 @@ func getConfig() *x402.Config {
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
 		PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.001")),
-	}
+	}, nil
 }
 
 func setupRoutes(r *gin.Engine, config *x402.Config) {
@@ -64,7 +65,7 @@ func setupRoutes(r *gin.Engine, config *x402.Config) {
 
 			c.JSON(httpStatusOK, gin.H{
 				"message": "This is protected data",
-				"data": map[string]interface{}{
+				"data": map[string]any{
 					"temperature": sampleTemperature,
 					"humidity":    sampleHumidity,
 					"timestamp":   "2025-01-01T00:00:00Z",
@@ -80,7 +81,7 @@ func setupRoutes(r *gin.Engine, config *x402.Config) {
 		})
 
 		protected.POST("/action", func(c *gin.Context) {
-			var body map[string]interface{}
+			var body map[string]any
 			if err := c.BindJSON(&body); err != nil {
 				c.JSON(httpStatusBadRequest, gin.H{"error": "Invalid request body"})
 				return
@@ -98,10 +99,13 @@ func main() {
 	r := gin.Default()
 
 	// Get configuration and setup routes
-	config := getConfig()
+	config, err := getConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	setupRoutes(r, config)
 
-	log.Printf("Starting server on :8080")
+	log.Print("Starting server on :8080")
 	log.Printf("Network: %s", config.Network)
 	log.Printf("Recipient: %s", config.RecipientAddress)
 	log.Printf("Facilitator: %s", config.FacilitatorURL)

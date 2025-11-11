@@ -48,18 +48,18 @@ type NetworkConfig struct {
 
 // Logger defines the logging interface.
 type Logger interface {
-	Printf(format string, v ...interface{})
-	Errorf(format string, v ...interface{})
+	Printf(format string, v ...any)
+	Errorf(format string, v ...any)
 }
 
 // DefaultLogger is a no-op logger.
 type DefaultLogger struct{}
 
 // Printf is a no-op implementation of the Logger interface.
-func (l *DefaultLogger) Printf(_ string, _ ...interface{}) {}
+func (*DefaultLogger) Printf(string, ...any) {}
 
 // Errorf is a no-op implementation of the Logger interface.
-func (l *DefaultLogger) Errorf(_ string, _ ...interface{}) {}
+func (*DefaultLogger) Errorf(string, ...any) {}
 
 // Validate checks if the configuration is valid.
 func (c *Config) Validate() error {
