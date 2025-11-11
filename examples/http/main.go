@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	httpx402 "github.com/dexfra-fun/x402-go/pkg/adapters/http"
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
 	"github.com/dexfra-fun/x402-go/pkg/x402"
-	httpx402 "github.com/dexfra-fun/x402-go/pkg/adapters/http"
 	"github.com/shopspring/decimal"
 )
 

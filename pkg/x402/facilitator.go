@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// FacilitatorClient handles communication with x402 facilitator services
+// FacilitatorClient handles communication with x402 facilitator services.
 type FacilitatorClient struct {
 	baseURL    string
 	httpClient *http.Client
@@ -19,12 +19,12 @@ type FacilitatorClient struct {
 	logger     Logger
 }
 
-// SupportedResponse represents the /supported endpoint response
+// SupportedResponse represents the /supported endpoint response.
 type SupportedResponse struct {
 	Kinds []Kind `json:"kinds"`
 }
 
-// Kind represents a supported payment kind
+// Kind represents a supported payment kind.
 type Kind struct {
 	X402Version int     `json:"x402Version"`
 	Scheme      string  `json:"scheme"`
@@ -32,17 +32,17 @@ type Kind struct {
 	Extra       *Extras `json:"extra,omitempty"`
 }
 
-// Extras contains additional metadata
+// Extras contains additional metadata.
 type Extras struct {
 	FeePayer string `json:"feePayer"`
 }
 
-// NewFacilitatorClient creates a new facilitator client
+// NewFacilitatorClient creates a new facilitator client.
 func NewFacilitatorClient(baseURL string, cache *FeePayerCache, logger Logger) *FacilitatorClient {
 	if logger == nil {
 		logger = &DefaultLogger{}
 	}
-	
+
 	return &FacilitatorClient{
 		baseURL: strings.TrimSuffix(baseURL, "/"),
 		httpClient: &http.Client{
@@ -54,7 +54,7 @@ func NewFacilitatorClient(baseURL string, cache *FeePayerCache, logger Logger) *
 }
 
 // GetFeePayer retrieves the fee payer for a given network
-// Uses cache if available, otherwise fetches from facilitator
+// Uses cache if available, otherwise fetches from facilitator.
 func (c *FacilitatorClient) GetFeePayer(ctx context.Context, network string) (string, error) {
 	// Try cache first
 	if feePayer, found := c.cache.Get(network); found {
@@ -81,8 +81,11 @@ func (c *FacilitatorClient) GetFeePayer(ctx context.Context, network string) (st
 	return feePayer, nil
 }
 
-// fetchFeePayer fetches fee payer from facilitator's /supported endpoint
-func (c *FacilitatorClient) fetchFeePayer(ctx context.Context, network string) (string, bool, error) {
+// fetchFeePayer fetches fee payer from facilitator's /supported endpoint.
+func (c *FacilitatorClient) fetchFeePayer(
+	ctx context.Context,
+	network string,
+) (string, bool, error) {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {
 		return "", false, fmt.Errorf("parse facilitator URL: %w", err)
@@ -127,7 +130,7 @@ func (c *FacilitatorClient) fetchFeePayer(ctx context.Context, network string) (
 	return "", false, nil
 }
 
-// GetSupported fetches all supported payment kinds from the facilitator
+// GetSupported fetches all supported payment kinds from the facilitator.
 func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {

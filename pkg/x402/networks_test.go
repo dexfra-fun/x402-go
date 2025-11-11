@@ -49,15 +49,15 @@ func TestIsNetworkSupported(t *testing.T) {
 
 func TestGetDefaultNetworks(t *testing.T) {
 	networks := GetDefaultNetworks()
-	
+
 	if len(networks) == 0 {
 		t.Error("expected non-empty default networks")
 	}
-	
+
 	if _, ok := networks["solana-devnet"]; !ok {
 		t.Error("expected solana-devnet in default networks")
 	}
-	
+
 	if _, ok := networks["solana-mainnet"]; !ok {
 		t.Error("expected solana-mainnet in default networks")
 	}

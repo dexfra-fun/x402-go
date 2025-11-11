@@ -10,7 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Middleware handles x402 payment verification
+// Middleware handles x402 payment verification.
 type Middleware struct {
 	config      *Config
 	facilitator *FacilitatorClient
@@ -18,7 +18,7 @@ type Middleware struct {
 	chainConfig x402.ChainConfig
 }
 
-// New creates a new x402 middleware instance
+// New creates a new x402 middleware instance.
 func New(config *Config) (*Middleware, error) {
 	// Validate configuration
 	if err := config.Validate(); err != nil {
@@ -33,7 +33,7 @@ func New(config *Config) (*Middleware, error) {
 
 	// Create cache
 	cache := NewFeePayerCache(config.CacheTTL)
-	
+
 	// Start cleanup routine (runs every CacheTTL/2)
 	cache.StartCleanupRoutine(config.CacheTTL / 2)
 
@@ -48,8 +48,11 @@ func New(config *Config) (*Middleware, error) {
 	}, nil
 }
 
-// ProcessRequest handles payment requirement for a resource
-func (m *Middleware) ProcessRequest(ctx context.Context, resource Resource) (*x402.PaymentRequirement, *PaymentInfo, error) {
+// ProcessRequest handles payment requirement for a resource.
+func (m *Middleware) ProcessRequest(
+	ctx context.Context,
+	resource Resource,
+) (*x402.PaymentRequirement, *PaymentInfo, error) {
 	// Get price for this resource
 	price, err := m.config.PricingStrategy.GetPrice(ctx, resource)
 	if err != nil {
@@ -106,12 +109,12 @@ func (m *Middleware) ProcessRequest(ctx context.Context, resource Resource) (*x4
 	return &requirement, paymentInfo, nil
 }
 
-// GetConfig returns the middleware configuration
+// GetConfig returns the middleware configuration.
 func (m *Middleware) GetConfig() *Config {
 	return m.config
 }
 
-// GetFacilitator returns the facilitator client
+// GetFacilitator returns the facilitator client.
 func (m *Middleware) GetFacilitator() *FacilitatorClient {
 	return m.facilitator
 }

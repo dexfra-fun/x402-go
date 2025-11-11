@@ -6,10 +6,10 @@ import (
 	"github.com/mark3labs/x402-go"
 )
 
-// MapNetworkToChain maps network string to x402.ChainConfig
+// MapNetworkToChain maps network string to x402.ChainConfig.
 func MapNetworkToChain(network string) (x402.ChainConfig, error) {
 	normalized := strings.ToLower(strings.TrimSpace(network))
-	
+
 	switch normalized {
 	case "solana-devnet":
 		return x402.SolanaDevnet, nil
@@ -20,7 +20,7 @@ func MapNetworkToChain(network string) (x402.ChainConfig, error) {
 	}
 }
 
-// GetDefaultNetworks returns the default network configurations
+// GetDefaultNetworks returns the default network configurations.
 func GetDefaultNetworks() map[string]NetworkConfig {
 	return map[string]NetworkConfig{
 		"solana-devnet": {
@@ -36,16 +36,16 @@ func GetDefaultNetworks() map[string]NetworkConfig {
 	}
 }
 
-// IsNetworkSupported checks if a network is supported
+// IsNetworkSupported checks if a network is supported.
 func IsNetworkSupported(network string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(network))
 	networks := GetDefaultNetworks()
-	
+
 	for key := range networks {
 		if key == normalized {
 			return true
 		}
 	}
-	
+
 	return false
 }

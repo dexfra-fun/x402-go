@@ -4,9 +4,9 @@ import (
 	"log"
 	"os"
 
+	ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
 	"github.com/dexfra-fun/x402-go/pkg/x402"
-	ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// FeePayerCache caches fee payer addresses to reduce facilitator calls
+// FeePayerCache caches fee payer addresses to reduce facilitator calls.
 type FeePayerCache struct {
 	mu       sync.RWMutex
 	data     map[string]cachedFeePayer
@@ -17,7 +17,7 @@ type cachedFeePayer struct {
 	timestamp time.Time
 }
 
-// NewFeePayerCache creates a new fee payer cache
+// NewFeePayerCache creates a new fee payer cache.
 func NewFeePayerCache(ttl time.Duration) *FeePayerCache {
 	return &FeePayerCache{
 		data:     make(map[string]cachedFeePayer),
@@ -25,7 +25,7 @@ func NewFeePayerCache(ttl time.Duration) *FeePayerCache {
 	}
 }
 
-// Get retrieves a cached fee payer if it exists and hasn't expired
+// Get retrieves a cached fee payer if it exists and hasn't expired.
 func (c *FeePayerCache) Get(network string) (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -39,7 +39,7 @@ func (c *FeePayerCache) Get(network string) (string, bool) {
 	return "", false
 }
 
-// Set stores a fee payer in the cache
+// Set stores a fee payer in the cache.
 func (c *FeePayerCache) Set(network, feePayer string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -50,7 +50,7 @@ func (c *FeePayerCache) Set(network, feePayer string) {
 	}
 }
 
-// Clear removes all entries from the cache
+// Clear removes all entries from the cache.
 func (c *FeePayerCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -58,7 +58,7 @@ func (c *FeePayerCache) Clear() {
 	c.data = make(map[string]cachedFeePayer)
 }
 
-// CleanupExpired removes expired entries from the cache
+// CleanupExpired removes expired entries from the cache.
 func (c *FeePayerCache) CleanupExpired() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -71,7 +71,7 @@ func (c *FeePayerCache) CleanupExpired() {
 	}
 }
 
-// StartCleanupRoutine starts a background goroutine to cleanup expired entries
+// StartCleanupRoutine starts a background goroutine to cleanup expired entries.
 func (c *FeePayerCache) StartCleanupRoutine(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {

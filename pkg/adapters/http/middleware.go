@@ -13,7 +13,7 @@ type contextKey string
 
 const paymentInfoKey contextKey = "x402_payment_info"
 
-// NewMiddleware creates a new standard HTTP middleware for x402 payment handling
+// NewMiddleware creates a new standard HTTP middleware for x402 payment handling.
 func NewMiddleware(config *x402.Config) func(http.Handler) http.Handler {
 	// Create x402 middleware
 	middleware, err := x402.New(config)
@@ -22,7 +22,11 @@ func NewMiddleware(config *x402.Config) func(http.Handler) http.Handler {
 		// Return a middleware that always returns error
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "Payment middleware configuration error", http.StatusInternalServerError)
+				http.Error(
+					w,
+					"Payment middleware configuration error",
+					http.StatusInternalServerError,
+				)
 			})
 		}
 	}
@@ -67,20 +71,20 @@ func NewMiddleware(config *x402.Config) func(http.Handler) http.Handler {
 
 			// Apply mark3labs x402 HTTP middleware
 			x402Handler := x402http.NewX402Middleware(x402Config)(next)
-			
+
 			// Store payment info in request context for later use
 			if paymentInfo != nil {
 				ctx := r.Context()
 				ctx = context.WithValue(ctx, paymentInfoKey, paymentInfo)
 				r = r.WithContext(ctx)
 			}
-			
+
 			x402Handler.ServeHTTP(w, r)
 		})
 	}
 }
 
-// GetPaymentInfo retrieves payment information from the request context
+// GetPaymentInfo retrieves payment information from the request context.
 func GetPaymentInfo(ctx context.Context) (*x402.PaymentInfo, bool) {
 	info, ok := ctx.Value(paymentInfoKey).(*x402.PaymentInfo)
 	return info, ok

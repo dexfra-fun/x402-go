@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	chix402 "github.com/dexfra-fun/x402-go/pkg/adapters/chi"
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
 	"github.com/dexfra-fun/x402-go/pkg/x402"
-	chix402 "github.com/dexfra-fun/x402-go/pkg/adapters/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/shopspring/decimal"
@@ -43,9 +43,9 @@ func main() {
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
 		PricingStrategy: pricing.NewPathBased(map[string]decimal.Decimal{
-			"/api/data":    decimal.RequireFromString("0.001"),  // 0.001 USDC
-			"/api/premium": decimal.RequireFromString("0.01"),   // 0.01 USDC
-			"/api/action":  decimal.RequireFromString("0.005"),  // 0.005 USDC
+			"/api/data":    decimal.RequireFromString("0.001"), // 0.001 USDC
+			"/api/premium": decimal.RequireFromString("0.01"),  // 0.01 USDC
+			"/api/action":  decimal.RequireFromString("0.005"), // 0.005 USDC
 		}, decimal.RequireFromString("0.001")), // default: 0.001 USDC
 	}
 

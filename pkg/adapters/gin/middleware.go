@@ -6,11 +6,11 @@ import (
 	"github.com/dexfra-fun/x402-go/pkg/x402"
 	"github.com/gin-gonic/gin"
 	mark3labs "github.com/mark3labs/x402-go"
-	ginx402 "github.com/mark3labs/x402-go/http/gin"
 	x402http "github.com/mark3labs/x402-go/http"
+	ginx402 "github.com/mark3labs/x402-go/http/gin"
 )
 
-// NewMiddleware creates a new Gin middleware for x402 payment handling
+// NewMiddleware creates a new Gin middleware for x402 payment handling.
 func NewMiddleware(config *x402.Config) gin.HandlerFunc {
 	// Create x402 middleware
 	middleware, err := x402.New(config)
@@ -76,7 +76,7 @@ func NewMiddleware(config *x402.Config) gin.HandlerFunc {
 	}
 }
 
-// GetPaymentInfo retrieves payment information from the Gin context
+// GetPaymentInfo retrieves payment information from the Gin context.
 func GetPaymentInfo(c *gin.Context) (*x402.PaymentInfo, bool) {
 	if info, exists := c.Get("x402_payment_info"); exists {
 		if paymentInfo, ok := info.(*x402.PaymentInfo); ok {
