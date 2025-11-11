@@ -3,7 +3,7 @@ package x402
 import (
 	"strings"
 
-	"github.com/mark3labs/x402-go"
+	x402 "github.com/dexfra-fun/x402-go"
 )
 
 // MapNetworkToChain maps network string to x402.ChainConfig.
