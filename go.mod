@@ -1,6 +1,6 @@
 module github.com/dexfra-fun/x402-go
 
-go 1.25.1
+go 1.23
 
 require (
 	github.com/gin-gonic/gin v1.10.0
