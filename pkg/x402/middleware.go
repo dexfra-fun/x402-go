@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mark3labs/x402-go"
+	x402 "github.com/dexfra-fun/x402-go"
 	"github.com/mr-tron/base58"
 	"github.com/shopspring/decimal"
 )

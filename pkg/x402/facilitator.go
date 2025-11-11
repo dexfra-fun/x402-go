@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	x402 "github.com/dexfra-fun/x402-go"
 )
 
 const (
@@ -180,4 +181,124 @@ func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	}
 
 	return data.Kinds, nil
+}
+
+// Verify verifies a payment with the facilitator.
+func (c *FacilitatorClient) Verify(
+	ctx context.Context,
+	payment x402.PaymentPayload,
+	requirement x402.PaymentRequirement,
+) (bool, string, string, error) {
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return false, "", "", fmt.Errorf("parse facilitator URL: %w", err)
+	}
+
+	u.Path = path.Join(u.Path, "verify")
+
+	// Create request body
+	reqBody := map[string]interface{}{
+		"payment":     payment,
+		"requirement": requirement,
+	}
+
+	jsonBytes, err := sonic.Marshal(reqBody)
+	if err != nil {
+		return false, "", "", fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		u.String(),
+		strings.NewReader(string(jsonBytes)),
+	)
+	if err != nil {
+		return false, "", "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false, "", "", fmt.Errorf("http request: %w", err)
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, "", "", fmt.Errorf("unexpected status %s", resp.Status)
+	}
+
+	var result struct {
+		IsValid       bool   `json:"isValid"`
+		InvalidReason string `json:"invalidReason,omitempty"`
+		Payer         string `json:"payer"`
+	}
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, "", "", fmt.Errorf("decode json: %w", err)
+	}
+
+	return result.IsValid, result.InvalidReason, result.Payer, nil
+}
+
+// Settle settles a payment with the facilitator.
+func (c *FacilitatorClient) Settle(
+	ctx context.Context,
+	payment x402.PaymentPayload,
+	requirement x402.PaymentRequirement,
+) (*x402.SettlementResponse, error) {
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse facilitator URL: %w", err)
+	}
+
+	u.Path = path.Join(u.Path, "settle")
+
+	// Create request body
+	reqBody := map[string]interface{}{
+		"payment":     payment,
+		"requirement": requirement,
+	}
+
+	jsonBytes, err := sonic.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		u.String(),
+		strings.NewReader(string(jsonBytes)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http request: %w", err)
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %s", resp.Status)
+	}
+
+	var settlement x402.SettlementResponse
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&settlement); err != nil {
+		return nil, fmt.Errorf("decode json: %w", err)
+	}
+
+	return &settlement, nil
 }
