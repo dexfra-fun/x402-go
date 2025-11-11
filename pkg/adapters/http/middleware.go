@@ -1,3 +1,4 @@
+// Package http provides x402 payment middleware adapter for standard HTTP handlers.
 package http
 
 import (
@@ -20,8 +21,8 @@ func NewMiddleware(config *x402.Config) func(http.Handler) http.Handler {
 	if err != nil {
 		config.Logger.Errorf("[x402-http] Failed to create middleware: %v", err)
 		// Return a middleware that always returns error
-		return func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		return func(_ http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(
 					w,
 					"Payment middleware configuration error",

@@ -1,3 +1,4 @@
+// Package chi provides x402 payment middleware adapter for Chi router.
 package chi
 
 import (

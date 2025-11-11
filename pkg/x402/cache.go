@@ -1,3 +1,4 @@
+// Package x402 provides core functionality for x402 payment protocol middleware.
 package x402
 
 import (

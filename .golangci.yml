@@ -7,7 +7,7 @@ version: "2"
 run:
   # Timeout for analysis
   timeout: 5m
-  
+
   # Which dirs to skip
   skip-dirs:
     - vendor
@@ -27,7 +27,7 @@ settings:
     extra-rules: true
     # Choose whether to use the module path
     module-path: github.com/dexfra-fun/x402-go
-    
+
   goimports:
     # Prefixes for local packages
     local-prefixes:
@@ -45,7 +45,7 @@ linters:
     - ineffassign # detects unused assignments
     - staticcheck # go vet on steroids (includes gosimple)
     - unused # checks for unused code
-    
+
     # Additional recommended linters
     - asasalint # checks for pass []any as any in variadic func
     - asciicheck # checks for non-ASCII identifiers
@@ -227,7 +227,6 @@ linters-settings:
       - name: increment-decrement
       - name: var-naming
       - name: var-declaration
-      - name: package-comments
       - name: range
       - name: receiver-naming
       - name: time-naming
@@ -284,20 +283,20 @@ issues:
         - gosec
         - noctx
         - wrapcheck
-    
+
     # Exclude example files
     - path: examples/
       linters:
         - errcheck
         - gosec
         - noctx
-    
+
     # Allow TODO comments in code
     - source: "// TODO"
       linters:
         - godot
         - godox
-    
+
     # Package comment not required for internal packages
     - path: internal/
       text: "should have a package comment"
@@ -306,10 +305,10 @@ issues:
 
   # Show all issues
   exclude-use-default: false
-  
+
   # Maximum issues count per one linter
   max-issues-per-linter: 0
-  
+
   # Maximum count of issues with the same text
   max-same-issues: 0
 

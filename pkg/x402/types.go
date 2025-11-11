@@ -8,6 +8,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const (
+	// defaultCacheTTL is the default cache time-to-live duration.
+	defaultCacheTTL = 5 * time.Minute
+)
+
 // PricingStrategy defines how to price API resources.
 type PricingStrategy interface {
 	GetPrice(ctx context.Context, resource Resource) (decimal.Decimal, error)
@@ -50,8 +55,11 @@ type Logger interface {
 // DefaultLogger is a no-op logger.
 type DefaultLogger struct{}
 
-func (l *DefaultLogger) Printf(format string, v ...interface{}) {}
-func (l *DefaultLogger) Errorf(format string, v ...interface{}) {}
+// Printf is a no-op implementation of the Logger interface.
+func (l *DefaultLogger) Printf(_ string, _ ...interface{}) {}
+
+// Errorf is a no-op implementation of the Logger interface.
+func (l *DefaultLogger) Errorf(_ string, _ ...interface{}) {}
 
 // Validate checks if the configuration is valid.
 func (c *Config) Validate() error {
@@ -70,7 +78,7 @@ func (c *Config) Validate() error {
 
 	// Set defaults
 	if c.CacheTTL == 0 {
-		c.CacheTTL = 5 * time.Minute
+		c.CacheTTL = defaultCacheTTL
 	}
 	if c.Logger == nil {
 		c.Logger = &DefaultLogger{}

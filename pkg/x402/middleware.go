@@ -35,7 +35,8 @@ func New(config *Config) (*Middleware, error) {
 	cache := NewFeePayerCache(config.CacheTTL)
 
 	// Start cleanup routine (runs every CacheTTL/2)
-	cache.StartCleanupRoutine(config.CacheTTL / 2)
+	const cacheCleanupDivisor = 2
+	cache.StartCleanupRoutine(config.CacheTTL / cacheCleanupDivisor)
 
 	// Create facilitator client
 	facilitator := NewFacilitatorClient(config.FacilitatorURL, cache, config.Logger)

@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	// defaultHTTPTimeout is the default timeout for HTTP requests to facilitator.
+	defaultHTTPTimeout = 10 * time.Second
+)
+
 // FacilitatorClient handles communication with x402 facilitator services.
 type FacilitatorClient struct {
 	baseURL    string
@@ -46,7 +51,7 @@ func NewFacilitatorClient(baseURL string, cache *FeePayerCache, logger Logger) *
 	return &FacilitatorClient{
 		baseURL: strings.TrimSuffix(baseURL, "/"),
 		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: defaultHTTPTimeout,
 		},
 		cache:  cache,
 		logger: logger,
@@ -81,6 +86,22 @@ func (c *FacilitatorClient) GetFeePayer(ctx context.Context, network string) (st
 	return feePayer, nil
 }
 
+// findFeePayerInKinds searches for a fee payer in the list of supported kinds.
+func findFeePayerInKinds(kinds []Kind, network string) (string, bool) {
+	target := strings.ToLower(strings.TrimSpace(network))
+	for _, k := range kinds {
+		if strings.ToLower(k.Network) == target {
+			if k.Extra != nil && strings.TrimSpace(k.Extra.FeePayer) != "" {
+				return k.Extra.FeePayer, true
+			}
+			// Network found but no fee payer
+			return "", false
+		}
+	}
+	// Network not found in supported list
+	return "", false
+}
+
 // fetchFeePayer fetches fee payer from facilitator's /supported endpoint.
 func (c *FacilitatorClient) fetchFeePayer(
 	ctx context.Context,
@@ -103,7 +124,11 @@ func (c *FacilitatorClient) fetchFeePayer(
 	if err != nil {
 		return "", false, fmt.Errorf("http request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", false, fmt.Errorf("unexpected status %s", resp.Status)
@@ -114,20 +139,9 @@ func (c *FacilitatorClient) fetchFeePayer(
 		return "", false, fmt.Errorf("decode json: %w", err)
 	}
 
-	// Find matching network
-	target := strings.ToLower(strings.TrimSpace(network))
-	for _, k := range data.Kinds {
-		if strings.ToLower(k.Network) == target {
-			if k.Extra != nil && strings.TrimSpace(k.Extra.FeePayer) != "" {
-				return k.Extra.FeePayer, true, nil
-			}
-			// Network found but no fee payer
-			return "", false, nil
-		}
-	}
-
-	// Network not found in supported list
-	return "", false, nil
+	// Find matching network and fee payer
+	feePayer, found := findFeePayerInKinds(data.Kinds, network)
+	return feePayer, found, nil
 }
 
 // GetSupported fetches all supported payment kinds from the facilitator.
@@ -149,7 +163,11 @@ func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status %s", resp.Status)

@@ -1,3 +1,4 @@
+// Package main demonstrates how to use x402 payment middleware with Gin framework.
 package main
 
 import (
@@ -11,10 +12,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func main() {
-	r := gin.Default()
+const (
+	httpStatusOK         = 200
+	httpStatusBadRequest = 400
+	sampleTemperature    = 25.5
+	sampleHumidity       = 60
+)
 
-	// Get configuration from environment variables
+func getConfig() *x402.Config {
 	recipientAddress := os.Getenv("X402_RECIPIENT_ADDRESS")
 	if recipientAddress == "" {
 		log.Fatal("X402_RECIPIENT_ADDRESS environment variable is required")
@@ -30,17 +35,18 @@ func main() {
 		facilitatorURL = "https://facilitator.payai.network" // default
 	}
 
-	// Configure x402 middleware with fixed pricing (0.001 USDC per call)
-	config := &x402.Config{
+	return &x402.Config{
 		RecipientAddress: recipientAddress,
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
 		PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.001")),
 	}
+}
 
+func setupRoutes(r *gin.Engine, config *x402.Config) {
 	// Free endpoint - no payment required
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(httpStatusOK, gin.H{
 			"status": "ok",
 		})
 	})
@@ -56,18 +62,18 @@ func main() {
 					paymentInfo.Amount.String(), paymentInfo.Currency, paymentInfo.Recipient)
 			}
 
-			c.JSON(200, gin.H{
+			c.JSON(httpStatusOK, gin.H{
 				"message": "This is protected data",
 				"data": map[string]interface{}{
-					"temperature": 25.5,
-					"humidity":    60,
+					"temperature": sampleTemperature,
+					"humidity":    sampleHumidity,
 					"timestamp":   "2025-01-01T00:00:00Z",
 				},
 			})
 		})
 
 		protected.GET("/premium", func(c *gin.Context) {
-			c.JSON(200, gin.H{
+			c.JSON(httpStatusOK, gin.H{
 				"message": "This is premium content",
 				"content": "Secret information only available after payment",
 			})
@@ -76,21 +82,29 @@ func main() {
 		protected.POST("/action", func(c *gin.Context) {
 			var body map[string]interface{}
 			if err := c.BindJSON(&body); err != nil {
-				c.JSON(400, gin.H{"error": "Invalid request body"})
+				c.JSON(httpStatusBadRequest, gin.H{"error": "Invalid request body"})
 				return
 			}
 
-			c.JSON(200, gin.H{
+			c.JSON(httpStatusOK, gin.H{
 				"message": "Action performed successfully",
 				"result":  body,
 			})
 		})
 	}
+}
+
+func main() {
+	r := gin.Default()
+
+	// Get configuration and setup routes
+	config := getConfig()
+	setupRoutes(r, config)
 
 	log.Printf("Starting server on :8080")
-	log.Printf("Network: %s", network)
-	log.Printf("Recipient: %s", recipientAddress)
-	log.Printf("Facilitator: %s", facilitatorURL)
+	log.Printf("Network: %s", config.Network)
+	log.Printf("Recipient: %s", config.RecipientAddress)
+	log.Printf("Facilitator: %s", config.FacilitatorURL)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)

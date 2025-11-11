@@ -1,3 +1,4 @@
+// Package pricing provides various pricing strategies for x402 payment middleware.
 package pricing
 
 import (
@@ -32,7 +33,7 @@ func NewFixedFromString(amount string) (*Fixed, error) {
 }
 
 // GetPrice returns the fixed price for any resource.
-func (p *Fixed) GetPrice(ctx context.Context, resource x402.Resource) (decimal.Decimal, error) {
+func (p *Fixed) GetPrice(_ context.Context, _ x402.Resource) (decimal.Decimal, error) {
 	return p.amount, nil
 }
 
@@ -83,7 +84,7 @@ func NewPathBasedFromFloat(prices map[string]float64, defaultPrice float64) *Pat
 }
 
 // GetPrice returns price based on the resource path.
-func (p *PathBased) GetPrice(ctx context.Context, resource x402.Resource) (decimal.Decimal, error) {
+func (p *PathBased) GetPrice(_ context.Context, resource x402.Resource) (decimal.Decimal, error) {
 	if price, ok := p.prices[resource.Path]; ok {
 		return price, nil
 	}
@@ -118,7 +119,7 @@ func NewMethodBasedFromFloat(prices map[string]float64, defaultPrice float64) *M
 
 // GetPrice returns price based on the HTTP method.
 func (p *MethodBased) GetPrice(
-	ctx context.Context,
+	_ context.Context,
 	resource x402.Resource,
 ) (decimal.Decimal, error) {
 	if price, ok := p.prices[resource.Method]; ok {

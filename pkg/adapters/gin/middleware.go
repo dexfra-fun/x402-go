@@ -1,3 +1,4 @@
+// Package gin provides x402 payment middleware adapter for Gin framework.
 package gin
 
 import (
