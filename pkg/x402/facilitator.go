@@ -2,13 +2,14 @@ package x402
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 const (
@@ -135,7 +136,7 @@ func (c *FacilitatorClient) fetchFeePayer(
 	}
 
 	var data SupportedResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return "", false, fmt.Errorf("decode json: %w", err)
 	}
 
@@ -174,7 +175,7 @@ func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	}
 
 	var data SupportedResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return nil, fmt.Errorf("decode json: %w", err)
 	}
 

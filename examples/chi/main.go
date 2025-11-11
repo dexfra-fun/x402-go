@@ -2,13 +2,13 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/bytedance/sonic"
 	chix402 "github.com/dexfra-fun/x402-go/pkg/adapters/chi"
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
 	"github.com/dexfra-fun/x402-go/pkg/x402"
@@ -59,7 +59,7 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 	// Free endpoint - no payment required
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]string{
+		if err := sonic.ConfigDefault.NewEncoder(w).Encode(map[string]string{
 			"status": "ok",
 		}); err != nil {
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -79,7 +79,7 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]any{
+			if err := sonic.ConfigDefault.NewEncoder(w).Encode(map[string]any{
 				"message": "This is protected data",
 				"data": map[string]any{
 					"temperature": sampleTemperature,
@@ -93,7 +93,7 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 
 		r.Get("/premium", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]any{
+			if err := sonic.ConfigDefault.NewEncoder(w).Encode(map[string]any{
 				"message": "This is premium content",
 				"content": "Secret information only available after payment",
 			}); err != nil {
@@ -103,13 +103,13 @@ func setupRoutes(r chi.Router, config *x402.Config) {
 
 		r.Post("/action", func(w http.ResponseWriter, r *http.Request) {
 			var body map[string]any
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&body); err != nil {
 				http.Error(w, "Invalid request body", http.StatusBadRequest)
 				return
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(map[string]any{
+			if err := sonic.ConfigDefault.NewEncoder(w).Encode(map[string]any{
 				"message": "Action performed successfully",
 				"result":  body,
 			}); err != nil {
