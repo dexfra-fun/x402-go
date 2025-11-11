@@ -96,7 +96,7 @@ func (m *Middleware) ProcessRequest(
 
 	// Add fee payer to extra metadata
 	if requirement.Extra == nil {
-		requirement.Extra = make(map[string]interface{})
+		requirement.Extra = make(map[string]any)
 	}
 	requirement.Extra["feePayer"] = feePayer
 

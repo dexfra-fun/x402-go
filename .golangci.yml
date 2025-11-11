@@ -1,328 +1,138 @@
-# golangci-lint v2 configuration for x402-go
-# Based on: https://gist.github.com/maratori/47a4d00457a92aa426dbd48a18776322
-# Adapted for x402-go project
-
+# golangci-lint v2 configuration
 version: "2"
 
 run:
-  # Timeout for analysis
   timeout: 5m
 
 formatters:
-  enable:
-    - gofumpt # stricter gofmt
-    - goimports # checks if the code and import statements are formatted
-    - golines # checks if code is formatted, and fixes long lines
-
-settings:
-  gofumpt:
-    # Choose whether to use the extra rules
-    extra-rules: true
-    # Choose whether to use the module path
-    module-path: github.com/dexfra-fun/x402-go
-
-  goimports:
-    # Prefixes for local packages
-    local-prefixes:
-      - github.com/dexfra-fun/x402-go
-
-  golines:
-    # Target maximum line length
-    max-len: 120
+  settings:
+    gofumpt:
+      module-path: github.com/dexfra-fun/x402-go
+      extra-rules: true
 
 linters:
   enable:
-    # Enabled by default
-    - errcheck # checking for unchecked errors
-    - govet # reports suspicious constructs
-    - ineffassign # detects unused assignments
-    - staticcheck # go vet on steroids (includes gosimple)
-    - unused # checks for unused code
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - copyloopvar
+    - cyclop
+    - dupl
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goprintffuncname
+    - gosec
+    - intrange
+    - makezero
+    - mirror
+    - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - perfsprint
+    - predeclared
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - testableexamples
+    - testifylint
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - wastedassign
+    - whitespace
 
-    # Additional recommended linters
-    - asasalint # checks for pass []any as any in variadic func
-    - asciicheck # checks for non-ASCII identifiers
-    - bidichk # checks for dangerous unicode sequences
-    - bodyclose # checks HTTP response body is closed
-    - canonicalheader # checks net/http.Header canonical usage
-    - copyloopvar # detects loop variable copying (Go 1.22+)
-    - cyclop # checks cyclomatic complexity
-    - dupl # code clone detection
-    - durationcheck # checks for duration multiplication
-    - errname # checks error naming conventions
-    - errorlint # finds error wrapping issues
-    - exhaustive # checks enum exhaustiveness
-    - fatcontext # detects nested contexts
-    - funlen # detects long functions
-    - gochecknoglobals # checks for globals
-    - gochecknoinits # checks for init functions
-    - gocognit # checks cognitive complexity
-    - goconst # finds repeated strings for constants
-    - gocritic # meta-linter with many checks
-    - gocyclo # checks cyclomatic complexity
-    - godot # checks comment punctuation
-    - goprintffuncname # checks printf naming
-    - gosec # security checks
-    - intrange # suggests integer ranges
-    - makezero # finds non-zero slice declarations
-    - mirror # checks bytes/strings patterns
-    - mnd # magic number detector
-    - musttag # enforces struct tags
-    - nakedret # finds naked returns
-    - nestif # checks nested if depth
-    - nilerr # finds nil error returns
-    - nilnil # checks nil error with nil value
-    - noctx # finds HTTP requests without context
-    - nolintlint # checks nolint directives
-    - nonamedreturns # reports named returns
-    - perfsprint # checks fmt.Sprintf optimization
-    - predeclared # finds shadowed predeclared identifiers
-    - reassign # checks variable reassignment
-    - revive # golint replacement
-    - rowserrcheck # checks sql.Rows error handling
-    - sloglint # slog usage checker
-    - sqlclosecheck # checks sql.Rows/Stmt closing
-    - testableexamples # checks example testability
-    - testifylint # testify usage checker
-    - tparallel # checks t.Parallel usage
-    - unconvert # removes unnecessary conversions
-    - unparam # finds unused parameters
-    - usestdlibvars # suggests stdlib constants
-    - wastedassign # finds wasted assignments
-    - whitespace # whitespace linter
-
-  # Optional linters (commented out, enable as needed)
-  # - exhaustruct # checks all struct fields initialized
-  # - godox # detects TODO/FIXME comments
-  # - goheader # checks file headers
-  # - interfacebloat # checks interface method count
-  # - ireturn # accept interfaces, return concrete
-  # - prealloc # preallocated slices
-  # - tagalign # struct tag alignment
-  # - varnamelen # variable name length
-  # - wrapcheck # error wrapping from external packages
-
-linters-settings:
-  cyclop:
-    # Max complexity
-    max-complexity: 15
-    # Package average
-    package-average: 10.0
-
-  errcheck:
-    # Check type assertions
-    check-type-assertions: true
-    # Check blank assignments
-    check-blank: true
-
-  exhaustive:
-    # Check switches and maps
-    check:
-      - switch
-      - map
-    # Require default case
-    default-signifies-exhaustive: false
-
-  funlen:
-    # Max lines in a function
-    lines: 100
-    # Max statements in a function
-    statements: 50
-
-  gocognit:
-    # Min complexity to report
-    min-complexity: 20
-
-  goconst:
-    # Min string length to check
-    min-len: 3
-    # Min occurrences to report
-    min-occurrences: 3
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-    settings:
-      captLocal:
-        paramsOnly: false
-      underef:
-        skipRecvDeref: false
-
-  gocyclo:
-    # Max cyclomatic complexity
-    min-complexity: 15
-
-  godot:
-    # Check all comments
-    scope: all
-    # Exclude generated files
-    exclude:
-      - "^\\+.*"
-
-  gosec:
-    # Exclude rules
-    excludes:
-      - G104 # Audit errors not checked
-      - G306 # Poor file permissions
-    # Include test files
-    tests: true
-
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment # too strict for this project
-    settings:
-      shadow:
-        strict: true
-
-  mnd:
-    # Ignored functions
-    ignored-functions:
-      - os.Chmod
-      - os.Mkdir
-      - os.OpenFile
-      - strconv.FormatFloat
-      - strconv.FormatInt
-      - strconv.ParseFloat
-
-  nakedret:
-    # Max func lines for naked returns
-    max-func-lines: 0 # disallow all naked returns
-
-  nolintlint:
-    # Allow directives without explanation
-    allow-no-explanation: [funlen, gocognit, lll]
-    # Require explanation
-    require-explanation: true
-    # Require specific linter
-    require-specific: true
-
-  revive:
-    rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-
-  sloglint:
-    # No global loggers
-    no-global: all
-    # Context usage
-    context: scope
-
-  staticcheck:
-    checks:
-      - all
-      - "-ST1000" # package comment
-      - "-ST1003" # naming
-      - "-ST1016" # receiver names
-
-  testifylint:
-    enable-all: true
-
-  unparam:
-    # Check exported functions
-    check-exported: true
-
-  whitespace:
-    # Enforce newline at end of if
-    multi-if: false
-    # Enforce newline at end of func
-    multi-func: false
-
-issues:
-  # Which dirs to exclude
-  exclude-dirs:
-    - vendor
-    - .git
-    - .github
-    - examples
-
-  # Excluding configuration per-path, per-linter, per-text
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - bodyclose
-        - dupl
-        - errcheck
-        - funlen
-        - goconst
-        - gochecknoglobals
-        - gocognit
-        - gocritic
-        - gocyclo
-        - gosec
-        - noctx
-        - wrapcheck
-
-    # Exclude example files
-    - path: examples/
-      linters:
-        - errcheck
-        - gosec
-        - noctx
-
-    # Allow TODO comments in code
-    - source: "// TODO"
-      linters:
-        - godot
-        - godox
-
-    # Package comment not required for internal packages
-    - path: internal/
-      text: "should have a package comment"
-      linters:
-        - revive
-
-  # Show all issues
-  exclude-use-default: false
-
-  # Maximum issues count per one linter
-  max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text
-  max-same-issues: 0
-
-  # Make issues output unique by line
-  uniq-by-line: true
-
-output:
-  # Output formats
-  formats:
-    colored-line-number:
-      path: stdout
-  # Print lines of code with issue
-  print-issued-lines: true
-  # Print linter name in the end of issue text
-  print-linter-name: true
-  # Sort results by: filepath, line and column
-  sort-results: true
+  settings:
+    revive:
+      # Maximum number of open files at the same time.
+      max-open-files: 2048
+      # Sets the default severity.
+      severity: warning
+      # Enable all available rules.
+      enable-all-rules: true
+      # Sets the default failure confidence.
+      confidence: 0.8
+      rules:
+        # Disable overly strict rules for this project
+        - name: add-constant
+          disabled: true
+        - name: argument-limit
+          disabled: true
+        - name: banned-characters
+          disabled: true
+        - name: cognitive-complexity
+          severity: warning
+          disabled: false
+          arguments: [25]
+        - name: comment-spacings
+          disabled: true
+        - name: comments-density
+          disabled: true
+        - name: cyclomatic
+          severity: warning
+          disabled: false
+          arguments: [10]
+        - name: file-header
+          disabled: true
+        - name: file-length-limit
+          disabled: true
+        - name: filename-format
+          disabled: true
+        - name: flag-parameter
+          disabled: true
+        - name: function-length
+          severity: warning
+          disabled: false
+          arguments: [60, 0]
+        - name: function-result-limit
+          disabled: true
+        - name: line-length-limit
+          disabled: true
+        - name: max-control-nesting
+          disabled: true
+        - name: max-public-structs
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: unused-parameter
+          severity: warning
+          disabled: false
+          arguments:
+            - allow-regex: "^_"
+        - name: unused-receiver
+          severity: warning
+          disabled: false
+          arguments:
+            - allow-regex: "^_"
+        - name: var-naming
+          severity: warning
+          disabled: false
+          arguments:
+            - ["ID", "API", "URL", "HTTP", "JSON", "XML", "HTML"]
+            - []
