@@ -2,14 +2,27 @@
 // with USDC across multiple blockchain networks. This package simplifies client and
 // middleware setup by providing verified USDC addresses, EIP-3009 parameters, and
 // utility functions for creating payment requirements and token configurations.
-//
-// See quickstart.md in specs/003-helpers-constants/ for detailed examples and usage.
 package x402
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
+)
+
+const (
+	// USDCDecimals is the standard number of decimals for USDC tokens.
+	USDCDecimals = 6
+
+	// DefaultMaxTimeoutSeconds is the default maximum timeout for payment authorization in seconds.
+	DefaultMaxTimeoutSeconds = 300
+
+	// DefaultMimeType is the default MIME type for payment responses.
+	DefaultMimeType = "application/json"
+
+	// DefaultScheme is the default payment scheme.
+	DefaultScheme = "exact"
 )
 
 // ChainConfig contains chain-specific configuration for USDC tokens and payment requirements.
@@ -58,14 +71,14 @@ type USDCRequirementConfig struct {
 	MimeType string
 }
 
-// Solana chain configurations
+// Solana chain configurations.
 var (
 	// SolanaMainnet is the configuration for Solana mainnet.
 	// USDC address verified 2025-10-28.
 	SolanaMainnet = ChainConfig{
 		NetworkID:      "solana",
 		USDCAddress:    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-		Decimals:       6,
+		Decimals:       USDCDecimals,
 		EIP3009Name:    "",
 		EIP3009Version: "",
 	}
@@ -75,7 +88,7 @@ var (
 	SolanaDevnet = ChainConfig{
 		NetworkID:      "solana-devnet",
 		USDCAddress:    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-		Decimals:       6,
+		Decimals:       USDCDecimals,
 		EIP3009Name:    "",
 		EIP3009Version: "",
 	}
@@ -92,7 +105,7 @@ func NewUSDCTokenConfig(chain ChainConfig, priority int) TokenConfig {
 	return TokenConfig{
 		Address:  chain.USDCAddress,
 		Symbol:   "USDC",
-		Decimals: 6,
+		Decimals: USDCDecimals,
 		Priority: priority,
 	}
 }
@@ -110,40 +123,41 @@ func NewUSDCTokenConfig(chain ChainConfig, priority int) TokenConfig {
 //   - MaxTimeoutSeconds: 300
 //   - MimeType: "application/json"
 //
-// Returns an error if validation fails. Error format: "parameterName: reason"
+// Returns an error if validation fails. Error format: "parameterName: reason".
 func NewUSDCPaymentRequirement(config USDCRequirementConfig) (PaymentRequirement, error) {
 	// Validate recipient address
 	if config.RecipientAddress == "" {
-		return PaymentRequirement{}, fmt.Errorf("recipientAddress: cannot be empty")
+		return PaymentRequirement{}, errors.New("recipientAddress: cannot be empty")
 	}
 
 	// Parse and validate amount
 	amount, err := strconv.ParseFloat(config.Amount, 64)
 	if err != nil {
-		return PaymentRequirement{}, fmt.Errorf("amount: invalid format")
+		return PaymentRequirement{}, errors.New("amount: invalid format")
 	}
 	if amount < 0 {
-		return PaymentRequirement{}, fmt.Errorf("amount: must be non-negative")
+		return PaymentRequirement{}, errors.New("amount: must be non-negative")
 	}
 
 	// Convert to atomic units (USDC always has 6 decimals)
-	atomicUnits := uint64(math.RoundToEven(amount * 1e6))
+	const usdcMultiplier = 1e6
+	atomicUnits := uint64(math.RoundToEven(amount * usdcMultiplier))
 	atomicString := strconv.FormatUint(atomicUnits, 10)
 
 	// Apply defaults
 	scheme := config.Scheme
 	if scheme == "" {
-		scheme = "exact"
+		scheme = DefaultScheme
 	}
 
 	maxTimeout := config.MaxTimeoutSeconds
 	if maxTimeout == 0 {
-		maxTimeout = 300
+		maxTimeout = DefaultMaxTimeoutSeconds
 	}
 
 	mimeType := config.MimeType
 	if mimeType == "" {
-		mimeType = "application/json"
+		mimeType = DefaultMimeType
 	}
 
 	// Create base payment requirement
@@ -160,7 +174,7 @@ func NewUSDCPaymentRequirement(config USDCRequirementConfig) (PaymentRequirement
 
 	// Populate EIP-3009 extra field for EVM chains
 	if config.Chain.EIP3009Name != "" {
-		req.Extra = map[string]interface{}{
+		req.Extra = map[string]any{
 			"name":    config.Chain.EIP3009Name,
 			"version": config.Chain.EIP3009Version,
 		}
@@ -177,7 +191,7 @@ func NewUSDCPaymentRequirement(config USDCRequirementConfig) (PaymentRequirement
 //   - solana-devnet
 func ValidateNetwork(networkID string) error {
 	if networkID == "" {
-		return fmt.Errorf("networkID: cannot be empty")
+		return errors.New("networkID: cannot be empty")
 	}
 
 	// Supported networks

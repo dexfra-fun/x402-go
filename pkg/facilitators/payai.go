@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// PayAI is the PayAI facilitator configuration.
 var PayAI = &Facilitator{
 	ID: "payAI",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var PayAI = &Facilitator{
 }
 
 func init() {
-	Register(PayAI)
+	if err := Register(PayAI); err != nil {
+		panic(err)
+	}
 }

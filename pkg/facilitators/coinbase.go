@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// Coinbase is the Coinbase facilitator configuration.
 var Coinbase = &Facilitator{
 	ID: "coinbase",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var Coinbase = &Facilitator{
 }
 
 func init() {
-	Register(Coinbase)
+	if err := Register(Coinbase); err != nil {
+		panic(err)
+	}
 }

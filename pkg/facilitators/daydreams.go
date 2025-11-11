@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// Daydreams is the Daydreams facilitator configuration.
 var Daydreams = &Facilitator{
 	ID: "daydreams",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var Daydreams = &Facilitator{
 }
 
 func init() {
-	Register(Daydreams)
+	if err := Register(Daydreams); err != nil {
+		panic(err)
+	}
 }

@@ -5,23 +5,34 @@ import (
 	"time"
 )
 
+const (
+	// DefaultVerifyTimeoutSeconds is the default verify timeout in seconds.
+	DefaultVerifyTimeoutSeconds = 5
+	// DefaultSettleTimeoutSeconds is the default settle timeout in seconds.
+	DefaultSettleTimeoutSeconds = 60
+	// DefaultRequestTimeoutSeconds is the default request timeout in seconds.
+	DefaultRequestTimeoutSeconds = 120
+)
+
 // TimeoutConfig holds timeout configuration for payment operations.
 type TimeoutConfig struct {
-	// VerifyTimeout is the maximum time to wait for payment verification
+	// VerifyTimeout is the maximum time to wait for payment verification.
 	VerifyTimeout time.Duration
 
-	// SettleTimeout is the maximum time to wait for payment settlement
+	// SettleTimeout is the maximum time to wait for payment settlement.
 	SettleTimeout time.Duration
 
-	// RequestTimeout is the overall timeout for HTTP requests (optional)
+	// RequestTimeout is the overall timeout for HTTP requests (optional).
 	RequestTimeout time.Duration
 }
 
-// DefaultTimeouts provides sensible defaults for payment operations.
-var DefaultTimeouts = TimeoutConfig{
-	VerifyTimeout:  5 * time.Second,
-	SettleTimeout:  60 * time.Second,
-	RequestTimeout: 120 * time.Second,
+// NewDefaultTimeouts returns a new TimeoutConfig with sensible defaults for payment operations.
+func NewDefaultTimeouts() TimeoutConfig {
+	return TimeoutConfig{
+		VerifyTimeout:  DefaultVerifyTimeoutSeconds * time.Second,
+		SettleTimeout:  DefaultSettleTimeoutSeconds * time.Second,
+		RequestTimeout: DefaultRequestTimeoutSeconds * time.Second,
+	}
 }
 
 // WithVerifyTimeout returns a new TimeoutConfig with updated verify timeout.

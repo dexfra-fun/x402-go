@@ -22,10 +22,10 @@ type VerifyResponse struct {
 
 // SupportedKind describes a supported payment type with its configuration.
 type SupportedKind struct {
-	X402Version int                    `json:"x402Version"`
-	Scheme      string                 `json:"scheme"`
-	Network     string                 `json:"network"`
-	Extra       map[string]interface{} `json:"extra,omitempty"`
+	X402Version int            `json:"x402Version"`
+	Scheme      string         `json:"scheme"`
+	Network     string         `json:"network"`
+	Extra       map[string]any `json:"extra,omitempty"`
 }
 
 // SupportedResponse lists all payment types supported by the facilitator.

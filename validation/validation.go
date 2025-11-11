@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -9,20 +10,25 @@ import (
 )
 
 var (
-	// solanaAddressRegex matches Solana base58 addresses (32-44 chars, base58 charset)
+	// solanaAddressRegex matches Solana base58 addresses (32-44 chars, base58 charset).
 	solanaAddressRegex = regexp.MustCompile(`^[1-9A-HJ-NP-Za-km-z]{32,44}$`)
+)
+
+const (
+	// DecimalBase is the base for parsing big integers.
+	DecimalBase = 10
 )
 
 // ValidateAmount validates that an amount string is a valid positive integer.
 // Returns an error if the amount is empty, malformed, or not greater than zero.
 func ValidateAmount(amount string) error {
 	if amount == "" {
-		return fmt.Errorf("amount cannot be empty")
+		return errors.New("amount cannot be empty")
 	}
 
 	// Parse as big.Int to handle large values
 	amt := new(big.Int)
-	amt, ok := amt.SetString(amount, 10)
+	amt, ok := amt.SetString(amount, DecimalBase)
 	if !ok {
 		return fmt.Errorf("invalid amount format: %s", amount)
 	}
@@ -38,7 +44,7 @@ func ValidateAmount(amount string) error {
 // It uses ValidateNetwork to confirm the network is supported.
 func ValidateAddress(address string, network string) error {
 	if address == "" {
-		return fmt.Errorf("address cannot be empty")
+		return errors.New("address cannot be empty")
 	}
 
 	if err := x402.ValidateNetwork(network); err != nil {
@@ -56,6 +62,45 @@ func ValidateAddress(address string, network string) error {
 	return fmt.Errorf("unsupported network for address validation: %s", network)
 }
 
+// validateRequirementNetwork validates the network field of a payment requirement.
+func validateRequirementNetwork(network string) error {
+	if network == "" {
+		return errors.New("invalid requirement: network cannot be empty")
+	}
+	if err := x402.ValidateNetwork(network); err != nil {
+		return fmt.Errorf("invalid requirement: %w", err)
+	}
+	return nil
+}
+
+// validateRequirementAddresses validates the addresses in a payment requirement.
+func validateRequirementAddresses(payTo, asset, network string) error {
+	if err := ValidateAddress(payTo, network); err != nil {
+		return fmt.Errorf("invalid requirement: payTo %w", err)
+	}
+
+	if asset == "" {
+		return errors.New("invalid requirement: asset address cannot be empty")
+	}
+
+	if err := ValidateAddress(asset, network); err != nil {
+		return fmt.Errorf("invalid requirement: asset %w", err)
+	}
+	return nil
+}
+
+// validateRequirementScheme validates the scheme field of a payment requirement.
+func validateRequirementScheme(scheme string) error {
+	switch scheme {
+	case "exact", "max", "subscription":
+		return nil
+	case "":
+		return errors.New("invalid requirement: scheme cannot be empty")
+	default:
+		return fmt.Errorf("invalid requirement: unsupported scheme %s", scheme)
+	}
+}
+
 // ValidatePaymentRequirement performs comprehensive validation of a payment requirement.
 // It validates the amount, network, addresses, scheme, and other required fields.
 func ValidatePaymentRequirement(req x402.PaymentRequirement) error {
@@ -65,36 +110,18 @@ func ValidatePaymentRequirement(req x402.PaymentRequirement) error {
 	}
 
 	// Validate network
-	if req.Network == "" {
-		return fmt.Errorf("invalid requirement: network cannot be empty")
+	if err := validateRequirementNetwork(req.Network); err != nil {
+		return err
 	}
 
-	if err := x402.ValidateNetwork(req.Network); err != nil {
-		return fmt.Errorf("invalid requirement: %w", err)
-	}
-
-	// Validate recipient address
-	if err := ValidateAddress(req.PayTo, req.Network); err != nil {
-		return fmt.Errorf("invalid requirement: payTo %w", err)
-	}
-
-	// Validate asset address (required)
-	if req.Asset == "" {
-		return fmt.Errorf("invalid requirement: asset address cannot be empty")
-	}
-
-	if err := ValidateAddress(req.Asset, req.Network); err != nil {
-		return fmt.Errorf("invalid requirement: asset %w", err)
+	// Validate addresses
+	if err := validateRequirementAddresses(req.PayTo, req.Asset, req.Network); err != nil {
+		return err
 	}
 
 	// Validate scheme
-	switch req.Scheme {
-	case "exact", "max", "subscription":
-		// Valid schemes
-	case "":
-		return fmt.Errorf("invalid requirement: scheme cannot be empty")
-	default:
-		return fmt.Errorf("invalid requirement: unsupported scheme %s", req.Scheme)
+	if err := validateRequirementScheme(req.Scheme); err != nil {
+		return err
 	}
 
 	// Validate timeout (must be non-negative)
@@ -113,11 +140,11 @@ func ValidatePaymentPayload(payment x402.PaymentPayload) error {
 	}
 
 	if payment.Scheme == "" {
-		return fmt.Errorf("scheme cannot be empty")
+		return errors.New("scheme cannot be empty")
 	}
 
 	if payment.Network == "" {
-		return fmt.Errorf("network cannot be empty")
+		return errors.New("network cannot be empty")
 	}
 
 	if err := x402.ValidateNetwork(payment.Network); err != nil {
@@ -125,7 +152,7 @@ func ValidatePaymentPayload(payment x402.PaymentPayload) error {
 	}
 
 	if payment.Payload == nil {
-		return fmt.Errorf("payload cannot be nil")
+		return errors.New("payload cannot be nil")
 	}
 
 	return nil

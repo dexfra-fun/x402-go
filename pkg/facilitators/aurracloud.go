@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// AurraCloud is the AurraCloud facilitator configuration.
 var AurraCloud = &Facilitator{
 	ID: "aurracloud",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var AurraCloud = &Facilitator{
 }
 
 func init() {
-	Register(AurraCloud)
+	if err := Register(AurraCloud); err != nil {
+		panic(err)
+	}
 }

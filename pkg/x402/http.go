@@ -93,7 +93,7 @@ func WritePaymentRequired(w http.ResponseWriter, req x402.PaymentRequirement) er
 	w.WriteHeader(http.StatusPaymentRequired)
 
 	// Write a simple JSON body explaining the payment requirement
-	body := map[string]interface{}{
+	body := map[string]any{
 		"error":   "Payment Required",
 		"message": "This resource requires payment. See X-402-Payment-Required header for details.",
 		"scheme":  req.Scheme,

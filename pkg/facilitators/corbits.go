@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// Corbits is the Corbits facilitator configuration.
 var Corbits = &Facilitator{
 	ID: "corbits",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var Corbits = &Facilitator{
 }
 
 func init() {
-	Register(Corbits)
+	if err := Register(Corbits); err != nil {
+		panic(err)
+	}
 }

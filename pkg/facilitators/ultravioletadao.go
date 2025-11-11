@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// UltravioletaDAO is the Ultravioleta DAO facilitator configuration.
 var UltravioletaDAO = &Facilitator{
 	ID: "ultravioletadao",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var UltravioletaDAO = &Facilitator{
 }
 
 func init() {
-	Register(UltravioletaDAO)
+	if err := Register(UltravioletaDAO); err != nil {
+		panic(err)
+	}
 }

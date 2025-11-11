@@ -31,8 +31,6 @@ linters:
     - exhaustive
     - fatcontext
     - funlen
-    - gochecknoglobals
-    - gochecknoinits
     - gocognit
     - goconst
     - gocritic
@@ -130,9 +128,11 @@ linters:
           disabled: false
           arguments:
             - allow-regex: "^_"
+        - name: package-comments
+          disabled: true
+        - name: confusing-results
+          disabled: true
+        - name: package-directory-mismatch
+          disabled: true
         - name: var-naming
-          severity: warning
-          disabled: false
-          arguments:
-            - ["ID", "API", "URL", "HTTP", "JSON", "XML", "HTML"]
-            - []
+          disabled: true

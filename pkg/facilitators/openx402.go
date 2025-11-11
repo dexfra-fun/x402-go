@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// OpenX402 is the OpenX402 facilitator configuration.
 var OpenX402 = &Facilitator{
 	ID: "openx402",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var OpenX402 = &Facilitator{
 }
 
 func init() {
-	Register(OpenX402)
+	if err := Register(OpenX402); err != nil {
+		panic(err)
+	}
 }

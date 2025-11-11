@@ -183,6 +183,13 @@ func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	return data.Kinds, nil
 }
 
+// VerifyResult contains the results of payment verification.
+type VerifyResult struct {
+	IsValid       bool
+	InvalidReason string
+	Payer         string
+}
+
 // Verify verifies a payment with the facilitator.
 func (c *FacilitatorClient) Verify(
 	ctx context.Context,
@@ -197,7 +204,7 @@ func (c *FacilitatorClient) Verify(
 	u.Path = path.Join(u.Path, "verify")
 
 	// Create request body
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"payment":     payment,
 		"requirement": requirement,
 	}
@@ -259,7 +266,7 @@ func (c *FacilitatorClient) Settle(
 	u.Path = path.Join(u.Path, "settle")
 
 	// Create request body
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"payment":     payment,
 		"requirement": requirement,
 	}

@@ -29,55 +29,46 @@ const (
 	FacilitatorIDUltravioletaDAO
 )
 
+var (
+	facilitatorIDToString = map[FacilitatorID]string{
+		FacilitatorIDUnknown:         "",
+		FacilitatorIDPayAI:           "payAI",
+		FacilitatorIDCoinbase:        "coinbase",
+		FacilitatorIDOpenX402:        "openx402",
+		FacilitatorIDAurraCloud:      "aurracloud",
+		FacilitatorIDCodeNut:         "codenut",
+		FacilitatorIDCorbits:         "corbits",
+		FacilitatorIDDaydreams:       "daydreams",
+		FacilitatorIDDexter:          "dexter",
+		FacilitatorIDUltravioletaDAO: "ultravioletadao",
+	}
+
+	stringToFacilitatorID = map[string]FacilitatorID{
+		"payAI":           FacilitatorIDPayAI,
+		"coinbase":        FacilitatorIDCoinbase,
+		"openx402":        FacilitatorIDOpenX402,
+		"aurracloud":      FacilitatorIDAurraCloud,
+		"codenut":         FacilitatorIDCodeNut,
+		"corbits":         FacilitatorIDCorbits,
+		"daydreams":       FacilitatorIDDaydreams,
+		"dexter":          FacilitatorIDDexter,
+		"ultravioletadao": FacilitatorIDUltravioletaDAO,
+	}
+)
+
 // IDString converts FacilitatorID to its string representation.
 // This maps enum values to the actual facilitator IDs used in the registry.
 func (f FacilitatorID) IDString() string {
-	switch f {
-	case FacilitatorIDPayAI:
-		return "payAI"
-	case FacilitatorIDCoinbase:
-		return "coinbase"
-	case FacilitatorIDOpenX402:
-		return "openx402"
-	case FacilitatorIDAurraCloud:
-		return "aurracloud"
-	case FacilitatorIDCodeNut:
-		return "codenut"
-	case FacilitatorIDCorbits:
-		return "corbits"
-	case FacilitatorIDDaydreams:
-		return "daydreams"
-	case FacilitatorIDDexter:
-		return "dexter"
-	case FacilitatorIDUltravioletaDAO:
-		return "ultravioletadao"
-	default:
-		return ""
+	if str, ok := facilitatorIDToString[f]; ok {
+		return str
 	}
+	return ""
 }
 
 // FacilitatorIDFromString converts a string ID to FacilitatorID enum.
 func FacilitatorIDFromString(id string) FacilitatorID {
-	switch id {
-	case "payAI":
-		return FacilitatorIDPayAI
-	case "coinbase":
-		return FacilitatorIDCoinbase
-	case "openx402":
-		return FacilitatorIDOpenX402
-	case "aurracloud":
-		return FacilitatorIDAurraCloud
-	case "codenut":
-		return FacilitatorIDCodeNut
-	case "corbits":
-		return FacilitatorIDCorbits
-	case "daydreams":
-		return FacilitatorIDDaydreams
-	case "dexter":
-		return FacilitatorIDDexter
-	case "ultravioletadao":
-		return FacilitatorIDUltravioletaDAO
-	default:
-		return FacilitatorIDUnknown
+	if facilID, ok := stringToFacilitatorID[id]; ok {
+		return facilID
 	}
+	return FacilitatorIDUnknown
 }

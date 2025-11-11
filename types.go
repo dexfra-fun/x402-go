@@ -1,6 +1,13 @@
 package x402
 
-import "math/big"
+import (
+	"math/big"
+)
+
+const (
+	// DecimalBase is the base for decimal conversion (10).
+	DecimalBase = 10
+)
 
 // PaymentRequirement represents a single payment option from a 402 response.
 type PaymentRequirement struct {
@@ -32,7 +39,7 @@ type PaymentRequirement struct {
 	MaxTimeoutSeconds int `json:"maxTimeoutSeconds"`
 
 	// Extra contains scheme-specific additional data.
-	Extra map[string]interface{} `json:"extra"`
+	Extra map[string]any `json:"extra"`
 }
 
 // PaymentRequirementsResponse represents the complete 402 response body.
@@ -61,7 +68,7 @@ type PaymentPayload struct {
 	// Payload contains the blockchain-specific signed payment data.
 	// For EVM: EVMPayload with signature and authorization
 	// For Solana: SVMPayload with partially signed transaction
-	Payload interface{} `json:"payload"`
+	Payload any `json:"payload"`
 }
 
 // TokenConfig represents configuration for a supported token.
@@ -149,7 +156,7 @@ func AmountToBigInt(amount string, decimals int) (*big.Int, error) {
 	}
 
 	// Multiply by 10^decimals
-	multiplier := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil))
+	multiplier := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(DecimalBase), big.NewInt(int64(decimals)), nil))
 	value.Mul(value, multiplier)
 
 	// Convert to integer
@@ -169,7 +176,7 @@ func BigIntToAmount(value *big.Int, decimals int) string {
 
 	// Convert to float and divide by 10^decimals
 	f := new(big.Float).SetInt(value)
-	divisor := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil))
+	divisor := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(DecimalBase), big.NewInt(int64(decimals)), nil))
 	f.Quo(f, divisor)
 
 	return f.Text('f', decimals)

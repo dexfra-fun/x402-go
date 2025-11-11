@@ -68,7 +68,7 @@ type PaymentError struct {
 	Message string
 
 	// Details contains additional error context.
-	Details map[string]interface{}
+	Details map[string]any
 
 	// Err is the underlying error.
 	Err error
@@ -116,12 +116,12 @@ func NewPaymentError(code ErrorCode, message string, err error) *PaymentError {
 		Code:    code,
 		Message: message,
 		Err:     err,
-		Details: make(map[string]interface{}),
+		Details: make(map[string]any),
 	}
 }
 
 // WithDetails adds additional context to the error.
-func (e *PaymentError) WithDetails(key string, value interface{}) *PaymentError {
+func (e *PaymentError) WithDetails(key string, value any) *PaymentError {
 	e.Details[key] = value
 	return e
 }

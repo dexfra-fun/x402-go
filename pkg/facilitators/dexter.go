@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// Dexter is the Dexter facilitator configuration.
 var Dexter = &Facilitator{
 	ID: "dexter",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var Dexter = &Facilitator{
 }
 
 func init() {
-	Register(Dexter)
+	if err := Register(Dexter); err != nil {
+		panic(err)
+	}
 }

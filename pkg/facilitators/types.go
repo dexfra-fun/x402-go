@@ -6,6 +6,7 @@ import "time"
 type Network string
 
 const (
+	// NetworkSolana represents the Solana blockchain network.
 	NetworkSolana Network = "solana"
 )
 
@@ -37,9 +38,14 @@ type Token struct {
 	Symbol   string
 }
 
-// Standard USDC token configuration for Solana
+const (
+	// USDCDecimalsConst is the standard number of decimals for USDC tokens.
+	USDCDecimalsConst = 6
+)
+
+// USDCSolanaToken is the standard USDC token configuration for Solana mainnet.
 var USDCSolanaToken = Token{
 	Address:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-	Decimals: 6,
+	Decimals: USDCDecimalsConst,
 	Symbol:   "USDC",
 }

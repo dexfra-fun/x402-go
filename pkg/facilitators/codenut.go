@@ -2,6 +2,7 @@ package facilitators
 
 import "time"
 
+// CodeNut is the CodeNut facilitator configuration.
 var CodeNut = &Facilitator{
 	ID: "codenut",
 	Metadata: FacilitatorMetadata{
@@ -21,5 +22,7 @@ var CodeNut = &Facilitator{
 }
 
 func init() {
-	Register(CodeNut)
+	if err := Register(CodeNut); err != nil {
+		panic(err)
+	}
 }
