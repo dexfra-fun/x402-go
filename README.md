@@ -8,8 +8,9 @@ A Go middleware library for implementing the [x402 payment protocol](https://git
 
 ## Features
 
-- 🔌 **Framework Support**: Gin, Chi, and standard `net/http`
+- 🔌 **Framework Support**: Gin, Chi, Fiber, and standard `net/http`
 - 💰 **Flexible Pricing**: Fixed or dynamic pricing strategies
+- 📋 **Schema Support**: Define input/output schemas for API endpoints
 - ⚡ **Facilitator Integration**: Built-in support for x402 facilitators
 - 🚀 **Performance**: Fee payer caching to reduce facilitator calls
 - 🌐 **Multi-Chain**: Support for Solana, EVM, and other networks
@@ -156,6 +157,132 @@ config := &x402.Config{
 }
 ```
 
+## Schema Support
+
+Define input/output schemas for your API endpoints according to the [x402 specification](https://github.com/coinbase/x402). Schemas are automatically included in 402 responses to help clients understand your API structure.
+
+### Basic Schema Usage
+
+```go
+import (
+    "github.com/dexfra-fun/x402-go"
+    "github.com/dexfra-fun/x402-go/pkg/schema"
+)
+
+// Define schema for an endpoint
+followersSchema := &x402.EndpointSchema{
+    Input: &x402.InputSchema{
+        Type:   "http",
+        Method: "GET",
+        QueryParams: map[string]*x402.FieldDef{
+            "userName": {
+                Type:        "string",
+                Required:    true,
+                Description: "screen name of the user",
+            },
+            "cursor": {
+                Type:        "string",
+                Required:    false,
+                Description: "pagination cursor",
+            },
+        },
+        HeaderFields: map[string]*x402.FieldDef{
+            "aisa-payment": {
+                Type:        "string",
+                Required:    false,
+                Description: "Payment proof header",
+            },
+        },
+    },
+}
+
+// Use path-based schema provider
+schemaProvider := schema.NewPathBased(map[string]*x402.EndpointSchema{
+    "/twitter/user/followers": followersSchema,
+}, nil)
+
+config := &x402.Config{
+    RecipientAddress: "YOUR_WALLET_ADDRESS",
+    Network:          "solana-devnet",
+    FacilitatorURL:   "https://facilitator.payai.network",
+    PricingStrategy:  pricing.NewFixed(decimal.NewFromFloat(0.001)),
+    SchemaProvider:   schemaProvider, // Add schema provider
+}
+```
+
+### Schema Builder API
+
+Use the fluent builder API for easier schema construction:
+
+```go
+schema := schema.NewEndpointSchema().
+    WithInput(
+        schema.NewInputSchema("POST").
+            WithBodyType("json").
+            WithBodyField("query", schema.NewFieldDef("string", true, "Search query")).
+            WithBodyField("limit", schema.NewFieldDef("integer", false, "Result limit")).
+            WithHeaderField("X-API-Key", schema.NewFieldDef("string", false, "API key")).
+            Build(),
+    ).
+    WithOutput(map[string]any{
+        "type": "object",
+        "properties": map[string]any{
+            "results": map[string]any{"type": "array"},
+            "total":   map[string]any{"type": "integer"},
+        },
+    }).
+    Build()
+```
+
+### Schema Provider Strategies
+
+**Static Schema** - Same schema for all endpoints:
+```go
+schema := schema.NewStatic(mySchema)
+```
+
+**Path-Based Schema** - Different schemas per path:
+```go
+schema := schema.NewPathBased(map[string]*x402.EndpointSchema{
+    "/api/users":    usersSchema,
+    "/api/products": productsSchema,
+}, defaultSchema)
+```
+
+**Dynamic Schema** - Custom logic:
+```go
+type MySchemaFetcher struct {
+    db *sql.DB
+}
+
+func (f *MySchemaFetcher) FetchSchema(ctx context.Context, resource x402.Resource) (*x402.EndpointSchema, error) {
+    // Fetch from database, external service, etc.
+    return schemaFromDB, nil
+}
+
+schema := schema.NewDynamic(&MySchemaFetcher{db: db})
+```
+
+### Advanced Field Definitions
+
+**Nested Objects:**
+```go
+schema.NewObjectField(map[string]*x402.FieldDef{
+    "city":    schema.NewFieldDef("string", true, "City name"),
+    "country": schema.NewFieldDef("string", true, "Country code"),
+}, true, "Address object")
+```
+
+**Enum Fields:**
+```go
+schema.NewEnumField([]string{"active", "inactive", "pending"}, false, "Status value")
+```
+
+**Conditional Requirements:**
+```go
+schema.NewConditionalField("string", []string{"otherField"}, "Required when otherField is present")
+```
+
 ## Configuration Options
 
 ```go
@@ -186,6 +313,7 @@ See the [examples](./examples) directory for complete working examples:
 - [Gin example](./examples/gin/main.go)
 - [Chi example](./examples/chi/main.go)
 - [Standard HTTP example](./examples/http/main.go)
+- [Schema support example](./examples/schema/main.go) - Demonstrates schema definition and usage
 
 ## Documentation
 

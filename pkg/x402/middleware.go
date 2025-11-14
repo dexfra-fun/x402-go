@@ -100,6 +100,17 @@ func (m *Middleware) ProcessRequest(
 	}
 	requirement.Extra["feePayer"] = feePayer
 
+	// Add schema if SchemaProvider is configured
+	if m.config.SchemaProvider != nil {
+		schema, err := m.config.SchemaProvider.GetSchema(ctx, resource)
+		if err != nil {
+			m.config.Logger.Printf("[x402] Failed to get schema: %v", err)
+		} else if schema != nil {
+			requirement.OutputSchema = schema
+			m.config.Logger.Printf("[x402] Schema added to payment requirement")
+		}
+	}
+
 	paymentInfo := &PaymentInfo{
 		Amount:    price,
 		Currency:  "USDC",

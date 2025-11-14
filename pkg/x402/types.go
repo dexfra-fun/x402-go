@@ -18,6 +18,12 @@ type PricingStrategy interface {
 	GetPrice(ctx context.Context, resource Resource) (decimal.Decimal, error)
 }
 
+// SchemaProvider defines how to provide schema for API resources.
+// This allows endpoints to describe their input/output structure in 402 responses.
+type SchemaProvider interface {
+	GetSchema(ctx context.Context, resource Resource) (*x402.EndpointSchema, error)
+}
+
 // Resource represents an API endpoint being accessed.
 type Resource struct {
 	Path   string
@@ -34,9 +40,10 @@ type Config struct {
 	PricingStrategy  PricingStrategy
 
 	// Optional fields
-	CacheTTL time.Duration
-	Networks map[string]NetworkConfig
-	Logger   Logger
+	SchemaProvider SchemaProvider // Optional: provides schema for API endpoints
+	CacheTTL       time.Duration
+	Networks       map[string]NetworkConfig
+	Logger         Logger
 }
 
 // NetworkConfig defines blockchain network configuration.

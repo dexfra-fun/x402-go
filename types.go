@@ -38,8 +38,11 @@ type PaymentRequirement struct {
 	// MaxTimeoutSeconds is the validity period for the payment authorization.
 	MaxTimeoutSeconds int `json:"maxTimeoutSeconds"`
 
+	// OutputSchema optionally describes the input and output expectations for the endpoint.
+	OutputSchema *EndpointSchema `json:"outputSchema,omitempty"`
+
 	// Extra contains scheme-specific additional data.
-	Extra map[string]any `json:"extra"`
+	Extra map[string]any `json:"extra,omitempty"`
 }
 
 // PaymentRequirementsResponse represents the complete 402 response body.
