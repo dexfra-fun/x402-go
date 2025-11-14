@@ -260,6 +260,7 @@ func (f *MySchemaFetcher) FetchSchema(ctx context.Context, resource x402.Resourc
     return schemaFromDB, nil
 }
 
+// MySchemaFetcher implements schema.Fetcher interface
 schema := schema.NewDynamic(&MySchemaFetcher{db: db})
 ```
 

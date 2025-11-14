@@ -18,27 +18,14 @@ import (
 )
 
 const (
-	httpStatusOK = 200
+	httpStatusOK         = 200
+	httpStatusBadRequest = 400
+	defaultResultCount   = 2
+	sampleTemperature    = 25.5
 )
 
-func getConfig() (*localx402.Config, error) {
-	recipientAddress := os.Getenv("X402_RECIPIENT_ADDRESS")
-	if recipientAddress == "" {
-		return nil, errors.New("X402_RECIPIENT_ADDRESS environment variable is required")
-	}
-
-	network := os.Getenv("X402_NETWORK")
-	if network == "" {
-		network = "solana-devnet" // default
-	}
-
-	facilitatorURL := os.Getenv("X402_FACILITATOR_URL")
-	if facilitatorURL == "" {
-		facilitatorURL = "https://facilitator.payai.network" // default
-	}
-
-	// Define schema for Twitter followers endpoint (matching official x402 spec)
-	twitterFollowersSchema := &x402.EndpointSchema{
+func createTwitterFollowersSchema() *x402.EndpointSchema {
+	return &x402.EndpointSchema{
 		Input: &x402.InputSchema{
 			Type:   "http",
 			Method: "GET",
@@ -84,9 +71,10 @@ func getConfig() (*localx402.Config, error) {
 			},
 		},
 	}
+}
 
-	// Define schema for a POST endpoint with body fields
-	dataSubmitSchema := schema.NewEndpointSchema().
+func createDataSubmitSchema() *x402.EndpointSchema {
+	return schema.NewEndpointSchema().
 		WithInput(
 			schema.NewInputSchema("POST").
 				WithBodyType("json").
@@ -107,9 +95,10 @@ func getConfig() (*localx402.Config, error) {
 			},
 		}).
 		Build()
+}
 
-	// Define schema for a simple GET endpoint
-	weatherSchema := schema.NewEndpointSchema().
+func createWeatherSchema() *x402.EndpointSchema {
+	return schema.NewEndpointSchema().
 		WithInput(
 			schema.NewInputSchema("GET").
 				WithQueryParam("city", schema.NewFieldDef("string", true, "City name")).
@@ -117,12 +106,29 @@ func getConfig() (*localx402.Config, error) {
 				Build(),
 		).
 		Build()
+}
 
-	// Create path-based schema provider
+func getConfig() (*localx402.Config, error) {
+	recipientAddress := os.Getenv("X402_RECIPIENT_ADDRESS")
+	if recipientAddress == "" {
+		return nil, errors.New("X402_RECIPIENT_ADDRESS environment variable is required")
+	}
+
+	network := os.Getenv("X402_NETWORK")
+	if network == "" {
+		network = "solana-devnet" // default
+	}
+
+	facilitatorURL := os.Getenv("X402_FACILITATOR_URL")
+	if facilitatorURL == "" {
+		facilitatorURL = "https://facilitator.payai.network" // default
+	}
+
+	// Create schemas using helper functions
 	schemaProvider := schema.NewPathBased(map[string]*x402.EndpointSchema{
-		"/twitter/user/followers": twitterFollowersSchema,
-		"/api/data":                dataSubmitSchema,
-		"/api/weather":             weatherSchema,
+		"/twitter/user/followers": createTwitterFollowersSchema(),
+		"/api/data":                createDataSubmitSchema(),
+		"/api/weather":             createWeatherSchema(),
 	}, nil)
 
 	return &localx402.Config{
@@ -170,14 +176,14 @@ func setupRoutes(r *gin.Engine, config *localx402.Config) {
 		protected.POST("/api/data", func(c *gin.Context) {
 			var body map[string]any
 			if err := c.BindJSON(&body); err != nil {
-				c.JSON(400, gin.H{"error": "Invalid request body"})
+				c.JSON(httpStatusBadRequest, gin.H{"error": "Invalid request body"})
 				return
 			}
 
 			c.JSON(httpStatusOK, gin.H{
 				"message": "Data processed successfully",
 				"results": []string{"result1", "result2"},
-				"total":   2,
+				"total":   defaultResultCount,
 			})
 		})
 
@@ -188,7 +194,7 @@ func setupRoutes(r *gin.Engine, config *localx402.Config) {
 
 			c.JSON(httpStatusOK, gin.H{
 				"city":        city,
-				"temperature": 25.5,
+				"temperature": sampleTemperature,
 				"units":       units,
 				"description": "Sunny",
 			})

@@ -2,6 +2,7 @@ package x402
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,6 +50,61 @@ func New(config *Config) (*Middleware, error) {
 	}, nil
 }
 
+// getFeePayer retrieves the fee payer, trying facilitator first then config fallback.
+func (m *Middleware) getFeePayer(ctx context.Context) (string, error) {
+	// Try facilitator first
+	feePayer, err := m.facilitator.GetFeePayer(ctx, m.config.Network)
+	if err != nil && !errors.Is(err, ErrFeePayerNotFound) {
+		return "", fmt.Errorf("get fee payer: %w", err)
+	}
+
+	// Use fallback if facilitator doesn't have one
+	if errors.Is(err, ErrFeePayerNotFound) && m.config.FeePayer != "" {
+		m.config.Logger.Printf("[x402] Facilitator doesn't provide fee payer, using config fallback")
+		return m.config.FeePayer, nil
+	}
+
+	return feePayer, nil
+}
+
+// validateFeePayer validates the fee payer address.
+func (m *Middleware) validateFeePayer(feePayer string) error {
+	feePayer = strings.TrimSpace(feePayer)
+	if feePayer == "" {
+		return ErrMissingFeePayer
+	}
+	if _, err := base58.Decode(feePayer); err != nil {
+		m.config.Logger.Errorf("[x402] Invalid fee payer (not base58): %q: %v", feePayer, err)
+		return ErrInvalidFeePayer
+	}
+	return nil
+}
+
+// addRequirementMetadata adds schema and extra metadata to requirement.
+func (m *Middleware) addRequirementMetadata(
+	ctx context.Context,
+	requirement *x402.PaymentRequirement,
+	resource Resource,
+	feePayer string,
+) {
+	// Add fee payer to extra metadata
+	if requirement.Extra == nil {
+		requirement.Extra = make(map[string]any)
+	}
+	requirement.Extra["feePayer"] = feePayer
+
+	// Add schema if SchemaProvider is configured
+	if m.config.SchemaProvider != nil {
+		schema, err := m.config.SchemaProvider.GetSchema(ctx, resource)
+		if err != nil {
+			m.config.Logger.Printf("[x402] Failed to get schema: %v", err)
+		} else if schema != nil {
+			requirement.OutputSchema = schema
+			m.config.Logger.Printf("[x402] Schema added to payment requirement")
+		}
+	}
+}
+
 // ProcessRequest handles payment requirement for a resource.
 func (m *Middleware) ProcessRequest(
 	ctx context.Context,
@@ -68,48 +124,29 @@ func (m *Middleware) ProcessRequest(
 	m.config.Logger.Printf("[x402] Payment required: path=%s method=%s price=%s USDC",
 		resource.Path, resource.Method, price.String())
 
-	// Get fee payer from facilitator
-	feePayer, err := m.facilitator.GetFeePayer(ctx, m.config.Network)
+	// Get and validate fee payer
+	feePayer, err := m.getFeePayer(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get fee payer: %w", err)
+		return nil, nil, err
 	}
 
-	// Validate fee payer address
 	feePayer = strings.TrimSpace(feePayer)
-	if _, err := base58.Decode(feePayer); err != nil {
-		m.config.Logger.Errorf("[x402] Invalid fee payer (not base58): %q: %v", feePayer, err)
-		return nil, nil, ErrInvalidFeePayer
+	if err := m.validateFeePayer(feePayer); err != nil {
+		return nil, nil, err
 	}
-
-	// Convert price to string
-	amountStr := price.String()
 
 	// Create USDC payment requirement
 	requirement, err := x402.NewUSDCPaymentRequirement(x402.USDCRequirementConfig{
 		Chain:            m.chainConfig,
-		Amount:           amountStr,
+		Amount:           price.String(),
 		RecipientAddress: m.config.RecipientAddress,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("create payment requirement: %w", err)
 	}
 
-	// Add fee payer to extra metadata
-	if requirement.Extra == nil {
-		requirement.Extra = make(map[string]any)
-	}
-	requirement.Extra["feePayer"] = feePayer
-
-	// Add schema if SchemaProvider is configured
-	if m.config.SchemaProvider != nil {
-		schema, err := m.config.SchemaProvider.GetSchema(ctx, resource)
-		if err != nil {
-			m.config.Logger.Printf("[x402] Failed to get schema: %v", err)
-		} else if schema != nil {
-			requirement.OutputSchema = schema
-			m.config.Logger.Printf("[x402] Schema added to payment requirement")
-		}
-	}
+	// Add metadata (feePayer in extra, schema if configured)
+	m.addRequirementMetadata(ctx, &requirement, resource, feePayer)
 
 	paymentInfo := &PaymentInfo{
 		Amount:    price,

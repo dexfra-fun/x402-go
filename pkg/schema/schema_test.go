@@ -1,19 +1,26 @@
 package schema
 
 import (
+	"net/http"
 	"testing"
 
 	x402 "github.com/dexfra-fun/x402-go"
 )
 
-func TestNewFieldDef(t *testing.T) {
-	field := NewFieldDef("string", true, "Test field")
+const (
+	stringType = "string"
+	objectType = "object"
+	httpType   = "http"
+)
 
-	if field.Type != "string" {
+func TestNewFieldDef(t *testing.T) {
+	field := NewFieldDef(stringType, true, "Test field")
+
+	if field.Type != stringType {
 		t.Errorf("Expected type 'string', got '%s'", field.Type)
 	}
-	if field.Required != true {
-		t.Errorf("Expected required to be true")
+	if !field.Required.(bool) {
+		t.Error("Expected required to be true")
 	}
 	if field.Description != "Test field" {
 		t.Errorf("Expected description 'Test field', got '%s'", field.Description)
@@ -24,7 +31,7 @@ func TestNewEnumField(t *testing.T) {
 	enum := []string{"active", "inactive", "pending"}
 	field := NewEnumField(enum, false, "Status field")
 
-	if field.Type != "string" {
+	if field.Type != stringType {
 		t.Errorf("Expected type 'string', got '%s'", field.Type)
 	}
 	if len(field.Enum) != 3 {
@@ -37,28 +44,28 @@ func TestNewEnumField(t *testing.T) {
 
 func TestNewObjectField(t *testing.T) {
 	properties := map[string]*x402.FieldDef{
-		"name": NewFieldDef("string", true, "Name"),
+		"name": NewFieldDef(stringType, true, "Name"),
 		"age":  NewFieldDef("integer", false, "Age"),
 	}
 
 	field := NewObjectField(properties, true, "User object")
 
-	if field.Type != "object" {
+	if field.Type != objectType {
 		t.Errorf("Expected type 'object', got '%s'", field.Type)
 	}
 	if len(field.Properties) != 2 {
 		t.Errorf("Expected 2 properties, got %d", len(field.Properties))
 	}
-	if field.Properties["name"].Type != "string" {
+	if field.Properties["name"].Type != stringType {
 		t.Errorf("Expected name property type 'string', got '%s'", field.Properties["name"].Type)
 	}
 }
 
 func TestNewConditionalField(t *testing.T) {
 	requiredWhen := []string{"otherField", "anotherField"}
-	field := NewConditionalField("string", requiredWhen, "Conditional field")
+	field := NewConditionalField(stringType, requiredWhen, "Conditional field")
 
-	if field.Type != "string" {
+	if field.Type != stringType {
 		t.Errorf("Expected type 'string', got '%s'", field.Type)
 	}
 
@@ -73,17 +80,17 @@ func TestNewConditionalField(t *testing.T) {
 }
 
 func TestInputSchemaBuilder(t *testing.T) {
-	schema := NewInputSchema("POST").
+	schema := NewInputSchema(http.MethodPost).
 		WithBodyType("json").
 		WithQueryParam("page", NewFieldDef("integer", false, "Page number")).
-		WithBodyField("name", NewFieldDef("string", true, "User name")).
-		WithHeaderField("X-API-Key", NewFieldDef("string", false, "API key")).
+		WithBodyField("name", NewFieldDef(stringType, true, "User name")).
+		WithHeaderField("X-API-Key", NewFieldDef(stringType, false, "API key")).
 		Build()
 
-	if schema.Type != "http" {
+	if schema.Type != httpType {
 		t.Errorf("Expected type 'http', got '%s'", schema.Type)
 	}
-	if schema.Method != "POST" {
+	if schema.Method != http.MethodPost {
 		t.Errorf("Expected method 'POST', got '%s'", schema.Method)
 	}
 	if schema.BodyType != "json" {
@@ -101,7 +108,7 @@ func TestInputSchemaBuilder(t *testing.T) {
 }
 
 func TestEndpointSchemaBuilder(t *testing.T) {
-	input := NewInputSchema("GET").Build()
+	input := NewInputSchema(http.MethodGet).Build()
 	output := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
