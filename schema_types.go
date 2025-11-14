@@ -1,5 +1,7 @@
 package x402
 
+import "encoding/json"
+
 // FieldDef describes a field in the API schema according to x402 specification.
 // It supports nested objects, enums, and conditional requirements.
 type FieldDef struct {
@@ -40,6 +42,36 @@ type InputSchema struct {
 
 	// HeaderFields defines the headers expected in the request.
 	HeaderFields map[string]*FieldDef `json:"headerFields,omitempty"`
+
+	// Discoverable indicates if the endpoint should be discoverable in schema listings.
+	// Defaults to true if not specified (nil).
+	Discoverable *bool `json:"discoverable,omitempty"`
+}
+
+// IsDiscoverable returns whether the endpoint is discoverable.
+// Returns true by default if Discoverable is not explicitly set to false.
+func (is *InputSchema) IsDiscoverable() bool {
+	if is.Discoverable == nil {
+		return true
+	}
+	return *is.Discoverable
+}
+
+// MarshalJSON implements custom JSON marshaling for InputSchema.
+// It ensures Discoverable is set to true by default when not explicitly set.
+func (is *InputSchema) MarshalJSON() ([]byte, error) {
+	type Alias InputSchema
+	
+	// Create a copy with Discoverable set to default value if nil
+	aux := &struct {
+		Discoverable bool `json:"discoverable"`
+		*Alias
+	}{
+		Discoverable: is.IsDiscoverable(),
+		Alias:        (*Alias)(is),
+	}
+	
+	return json.Marshal(aux)
 }
 
 // EndpointSchema wraps input and output schema for an API endpoint.
