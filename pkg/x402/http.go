@@ -85,25 +85,22 @@ func SetPaymentRequiredHeader(w http.ResponseWriter, req x402.PaymentRequirement
 	return nil
 }
 
-// WritePaymentRequired writes a 402 Payment Required response with the requirement header.
+// WritePaymentRequired writes a 402 Payment Required response with proper x402 format.
 func WritePaymentRequired(w http.ResponseWriter, req x402.PaymentRequirement) error {
 	if err := SetPaymentRequiredHeader(w, req); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusPaymentRequired)
 
-	// Write a simple JSON body explaining the payment requirement
-	body := map[string]any{
-		"error":   "Payment Required",
-		"message": "This resource requires payment. See X-402-Payment-Required header for details.",
-		"scheme":  req.Scheme,
-		"network": req.Network,
-		"amount":  req.MaxAmountRequired,
-		"asset":   req.Asset,
+	// Create proper x402 response body according to specification
+	response := x402.PaymentRequirementsResponse{
+		X402Version: 1,
+		Error:       "X-PAYMENT header is required",
+		Accepts:     []x402.PaymentRequirement{req},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	return sonic.ConfigDefault.NewEncoder(w).Encode(body)
+	w.WriteHeader(http.StatusPaymentRequired)
+	return sonic.ConfigDefault.NewEncoder(w).Encode(response)
 }
 
 // BasicPaymentCheck performs basic validation that a payment matches a requirement.
