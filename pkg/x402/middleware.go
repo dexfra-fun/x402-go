@@ -68,14 +68,23 @@ func (m *Middleware) ProcessRequest(
 	m.config.Logger.Printf("[x402] Payment required: path=%s method=%s price=%s USDC",
 		resource.Path, resource.Method, price.String())
 
-	// Get fee payer from facilitator
+	// Get fee payer from facilitator first
 	feePayer, err := m.facilitator.GetFeePayer(ctx, m.config.Network)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get fee payer: %w", err)
+		// If facilitator doesn't have fee payer, try fallback from config
+		if err == ErrFeePayerNotFound && m.config.FeePayer != "" {
+			m.config.Logger.Printf("[x402] Facilitator doesn't provide fee payer, using config fallback")
+			feePayer = m.config.FeePayer
+		} else {
+			return nil, nil, fmt.Errorf("get fee payer: %w", err)
+		}
 	}
 
 	// Validate fee payer address
 	feePayer = strings.TrimSpace(feePayer)
+	if feePayer == "" {
+		return nil, nil, ErrMissingFeePayer
+	}
 	if _, err := base58.Decode(feePayer); err != nil {
 		m.config.Logger.Errorf("[x402] Invalid fee payer (not base58): %q: %v", feePayer, err)
 		return nil, nil, ErrInvalidFeePayer

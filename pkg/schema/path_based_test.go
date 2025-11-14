@@ -2,47 +2,15 @@ package schema
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	x402 "github.com/dexfra-fun/x402-go"
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 )
 
-func TestPathBased(t *testing.T) {
-	// Create test schemas
-	usersSchema := &x402.EndpointSchema{
-		Input: &x402.InputSchema{
-			Type:   "http",
-			Method: "GET",
-			QueryParams: map[string]*x402.FieldDef{
-				"page": NewFieldDef("integer", false, "Page number"),
-			},
-		},
-	}
-
-	productsSchema := &x402.EndpointSchema{
-		Input: &x402.InputSchema{
-			Type:   "http",
-			Method: "POST",
-			BodyFields: map[string]*x402.FieldDef{
-				"name": NewFieldDef("string", true, "Product name"),
-			},
-		},
-	}
-
-	defaultSchema := &x402.EndpointSchema{
-		Input: &x402.InputSchema{
-			Type:   "http",
-			Method: "GET",
-		},
-	}
-
-	// Create path-based provider
-	provider := NewPathBased(map[string]*x402.EndpointSchema{
-		"/api/users":    usersSchema,
-		"/api/products": productsSchema,
-	}, defaultSchema)
-
+func testPathBasedExactMatch(t *testing.T, provider *PathBased, usersSchema, productsSchema *x402.EndpointSchema) {
+	t.Helper()
 	tests := []struct {
 		name           string
 		path           string
@@ -52,33 +20,27 @@ func TestPathBased(t *testing.T) {
 		{
 			name:           "exact match users",
 			path:           "/api/users",
-			expectedMethod: "GET",
+			expectedMethod: http.MethodGet,
 			expectedSchema: usersSchema,
 		},
 		{
 			name:           "exact match products",
 			path:           "/api/products",
-			expectedMethod: "POST",
+			expectedMethod: http.MethodPost,
 			expectedSchema: productsSchema,
-		},
-		{
-			name:           "no match returns default",
-			path:           "/api/other",
-			expectedMethod: "GET",
-			expectedSchema: defaultSchema,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resource := localx402.Resource{Path: tt.path, Method: "GET"}
+			resource := localx402.Resource{Path: tt.path, Method: http.MethodGet}
 			schema, err := provider.GetSchema(context.Background(), resource)
 
 			if err != nil {
 				t.Errorf("Expected no error, got %v", err)
 			}
 			if schema != tt.expectedSchema {
-				t.Errorf("Expected specific schema instance, got different one")
+				t.Error("Expected specific schema instance, got different one")
 			}
 			if schema.Input.Method != tt.expectedMethod {
 				t.Errorf("Expected method '%s', got '%s'", tt.expectedMethod, schema.Input.Method)
@@ -87,11 +49,66 @@ func TestPathBased(t *testing.T) {
 	}
 }
 
+func TestPathBased(t *testing.T) {
+	// Create test schemas
+	usersSchema := &x402.EndpointSchema{
+		Input: &x402.InputSchema{
+			Type:   "http",
+			Method: http.MethodGet,
+			QueryParams: map[string]*x402.FieldDef{
+				"page": NewFieldDef("integer", false, "Page number"),
+			},
+		},
+	}
+
+	productsSchema := &x402.EndpointSchema{
+		Input: &x402.InputSchema{
+			Type:   "http",
+			Method: http.MethodPost,
+			BodyFields: map[string]*x402.FieldDef{
+				"name": NewFieldDef("string", true, "Product name"),
+			},
+		},
+	}
+
+	defaultSchema := &x402.EndpointSchema{
+		Input: &x402.InputSchema{
+			Type:   "http",
+			Method: http.MethodGet,
+		},
+	}
+
+	// Create path-based provider
+	provider := NewPathBased(map[string]*x402.EndpointSchema{
+		"/api/users":    usersSchema,
+		"/api/products": productsSchema,
+	}, defaultSchema)
+
+	// Test exact matches
+	testPathBasedExactMatch(t, provider, usersSchema, productsSchema)
+
+	// Test default fallback
+	t.Run("no match returns default", func(t *testing.T) {
+		resource := localx402.Resource{Path: "/api/other", Method: http.MethodGet}
+		schema, err := provider.GetSchema(context.Background(), resource)
+
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if schema != defaultSchema {
+			t.Error("Expected default schema")
+		}
+		if schema.Input.Method != http.MethodGet {
+			t.Errorf("Expected method 'GET', got '%s'", schema.Input.Method)
+		}
+	})
+}
+
 func TestPathBasedNoDefault(t *testing.T) {
 	schema := &x402.EndpointSchema{
 		Input: &x402.InputSchema{
 			Type:   "http",
-			Method: "GET",
+			Method: http.MethodGet,
 		},
 	}
 
@@ -100,7 +117,7 @@ func TestPathBasedNoDefault(t *testing.T) {
 	}, nil)
 
 	// Test with non-matching path
-	resource := localx402.Resource{Path: "/api/other", Method: "GET"}
+	resource := localx402.Resource{Path: "/api/other", Method: http.MethodGet}
 	result, err := provider.GetSchema(context.Background(), resource)
 
 	if err != nil {
@@ -115,7 +132,7 @@ func TestPathBasedAddSchema(t *testing.T) {
 	provider := NewPathBased(nil, nil)
 
 	// Initially, should return nil for any path
-	resource := localx402.Resource{Path: "/api/test", Method: "GET"}
+	resource := localx402.Resource{Path: "/api/test", Method: http.MethodGet}
 	schema, err := provider.GetSchema(context.Background(), resource)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -128,7 +145,7 @@ func TestPathBasedAddSchema(t *testing.T) {
 	testSchema := &x402.EndpointSchema{
 		Input: &x402.InputSchema{
 			Type:   "http",
-			Method: "POST",
+			Method: http.MethodPost,
 		},
 	}
 	provider.AddSchema("/api/test", testSchema)
@@ -149,14 +166,14 @@ func TestPathBasedSetDefaultSchema(t *testing.T) {
 	defaultSchema := &x402.EndpointSchema{
 		Input: &x402.InputSchema{
 			Type:   "http",
-			Method: "GET",
+			Method: http.MethodGet,
 		},
 	}
 
 	provider.SetDefaultSchema(defaultSchema)
 
 	// Any path should now return the default schema
-	resource := localx402.Resource{Path: "/any/path", Method: "GET"}
+	resource := localx402.Resource{Path: "/any/path", Method: http.MethodGet}
 	schema, err := provider.GetSchema(context.Background(), resource)
 
 	if err != nil {

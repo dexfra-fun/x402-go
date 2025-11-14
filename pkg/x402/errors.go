@@ -14,6 +14,8 @@ var (
 
 	// ErrInvalidFeePayer indicates that the fee payer address is invalid.
 	ErrInvalidFeePayer = errors.New("x402: invalid fee payer address")
+	// ErrMissingFeePayer indicates that no fee payer was provided.
+	ErrMissingFeePayer = errors.New("x402: fee payer is required (not provided by facilitator and not in config)")
 	// ErrFacilitatorUnavailable indicates that the facilitator service is unavailable.
 	ErrFacilitatorUnavailable = errors.New("x402: facilitator service unavailable")
 	// ErrFeePayerNotFound indicates that no fee payer was found for the specified network.

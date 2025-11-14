@@ -9,7 +9,7 @@ import (
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 )
 
-// MockSchemaFetcher is a mock implementation of SchemaFetcher for testing
+// MockSchemaFetcher is a mock implementation of SchemaFetcher for testing.
 type MockSchemaFetcher struct {
 	schemas map[string]*x402.EndpointSchema
 	err     error
@@ -22,7 +22,8 @@ func (m *MockSchemaFetcher) FetchSchema(_ context.Context, resource localx402.Re
 	if schema, ok := m.schemas[resource.Path]; ok {
 		return schema, nil
 	}
-	return nil, nil
+	// Return nil schema for unknown paths (valid case, not an error)
+	return nil, nil //nolint:nilnil // Returning nil schema is valid when path not found
 }
 
 func TestDynamic(t *testing.T) {
@@ -102,7 +103,7 @@ func TestDynamicError(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
-	if err != expectedErr {
+	if !errors.Is(err, expectedErr) {
 		t.Errorf("Expected error '%v', got '%v'", expectedErr, err)
 	}
 	if schema != nil {

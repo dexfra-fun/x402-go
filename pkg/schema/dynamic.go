@@ -7,10 +7,10 @@ import (
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 )
 
-// SchemaFetcher defines the interface for fetching schemas dynamically.
+// Fetcher defines the interface for fetching schemas dynamically.
 // Users can implement this interface to fetch schemas from databases,
 // external services, or any custom logic.
-type SchemaFetcher interface {
+type Fetcher interface {
 	FetchSchema(ctx context.Context, resource localx402.Resource) (*x402.EndpointSchema, error)
 }
 
@@ -18,11 +18,11 @@ type SchemaFetcher interface {
 // This allows for complex schema resolution logic like database lookups,
 // API calls, or other dynamic sources.
 type Dynamic struct {
-	fetcher SchemaFetcher
+	fetcher Fetcher
 }
 
 // NewDynamic creates a new dynamic schema provider.
-func NewDynamic(fetcher SchemaFetcher) *Dynamic {
+func NewDynamic(fetcher Fetcher) *Dynamic {
 	return &Dynamic{
 		fetcher: fetcher,
 	}

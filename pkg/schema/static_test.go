@@ -2,6 +2,7 @@ package schema
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	x402 "github.com/dexfra-fun/x402-go"
@@ -13,7 +14,7 @@ func TestStatic(t *testing.T) {
 	testSchema := &x402.EndpointSchema{
 		Input: &x402.InputSchema{
 			Type:   "http",
-			Method: "GET",
+			Method: http.MethodGet,
 			QueryParams: map[string]*x402.FieldDef{
 				"id": {
 					Type:        "string",
@@ -29,9 +30,9 @@ func TestStatic(t *testing.T) {
 
 	// Test with different resources
 	resources := []localx402.Resource{
-		{Path: "/api/users", Method: "GET"},
-		{Path: "/api/products", Method: "POST"},
-		{Path: "/different/path", Method: "DELETE"},
+		{Path: "/api/users", Method: http.MethodGet},
+		{Path: "/api/products", Method: http.MethodPost},
+		{Path: "/different/path", Method: http.MethodDelete},
 	}
 
 	for _, resource := range resources {
@@ -42,8 +43,9 @@ func TestStatic(t *testing.T) {
 			}
 			if schema == nil {
 				t.Error("Expected schema, got nil")
+				return
 			}
-			if schema.Input.Method != "GET" {
+			if schema.Input.Method != http.MethodGet {
 				t.Errorf("Expected method 'GET', got '%s'", schema.Input.Method)
 			}
 			// Verify it's the same schema instance
@@ -57,7 +59,7 @@ func TestStatic(t *testing.T) {
 func TestStaticNilSchema(t *testing.T) {
 	provider := NewStatic(nil)
 
-	resource := localx402.Resource{Path: "/api/test", Method: "GET"}
+	resource := localx402.Resource{Path: "/api/test", Method: http.MethodGet}
 	schema, err := provider.GetSchema(context.Background(), resource)
 
 	if err != nil {

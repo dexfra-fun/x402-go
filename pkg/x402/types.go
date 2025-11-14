@@ -41,6 +41,7 @@ type Config struct {
 
 	// Optional fields
 	SchemaProvider SchemaProvider // Optional: provides schema for API endpoints
+	FeePayer       string         // Optional: fallback fee payer if facilitator doesn't provide one
 	CacheTTL       time.Duration
 	Networks       map[string]NetworkConfig
 	Logger         Logger
