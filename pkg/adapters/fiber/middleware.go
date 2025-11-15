@@ -35,8 +35,8 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 			resource.Params[string(key)] = string(value)
 		})
 
-		// Get payment header
-		paymentHeader := string(c.Request().Header.Peek("X-PAYMENT"))
+		// Get payment header (use canonical form X-Payment)
+		paymentHeader := string(c.Request().Header.Peek("X-Payment"))
 
 		// Process payment
 		result := handler.ProcessPaymentWithHeader(c.Context(), resource, paymentHeader)
@@ -44,7 +44,8 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 		// Handle errors
 		if result.Error != nil {
 			return c.Status(result.StatusCode).JSON(fiber.Map{
-				"error": result.ErrorMessage,
+				"x402Version": 1,
+				"error":       result.ErrorMessage,
 			})
 		}
 

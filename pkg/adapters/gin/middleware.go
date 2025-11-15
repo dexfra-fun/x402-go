@@ -35,10 +35,10 @@ func NewMiddleware(config *localx402.Config) gin.HandlerFunc {
 
 		// Handle errors
 		if result.Error != nil {
-			c.JSON(result.StatusCode, gin.H{
-				"error": result.ErrorMessage,
+			c.AbortWithStatusJSON(result.StatusCode, gin.H{
+				"x402Version": 1,
+				"error":       result.ErrorMessage,
 			})
-			c.Abort()
 			return
 		}
 
