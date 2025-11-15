@@ -12,9 +12,11 @@ import (
 
 const (
 	// HeaderPayment is the HTTP header name for x402 payment information.
-	HeaderPayment = "X-402-Payment"
-	// HeaderPaymentRequired is the HTTP header name for x402 payment requirements.
-	HeaderPaymentRequired = "X-402-Payment-Required"
+	// Uses canonical form for HTTP headers.
+	HeaderPayment = "X-Payment"
+	// HeaderPaymentResponse is the HTTP header name for x402 settlement response.
+	// Uses canonical form for HTTP headers.
+	HeaderPaymentResponse = "X-Payment-Response"
 )
 
 // EncodePaymentRequirement encodes a payment requirement as a base64 JSON string.
@@ -75,32 +77,59 @@ func ParsePaymentHeader(r *http.Request) (*x402.PaymentPayload, error) {
 	return DecodePaymentPayload(header)
 }
 
-// SetPaymentRequiredHeader sets the X-402-Payment-Required header on the response.
-func SetPaymentRequiredHeader(w http.ResponseWriter, req x402.PaymentRequirement) error {
-	encoded, err := EncodePaymentRequirement(req)
+// SetPaymentResponseHeader sets the X-PAYMENT-RESPONSE header with settlement information.
+func SetPaymentResponseHeader(w http.ResponseWriter, settlement x402.SettlementResponse) error {
+	encoded, err := EncodeSettlement(settlement)
 	if err != nil {
 		return err
 	}
-	w.Header().Set(HeaderPaymentRequired, encoded)
+	w.Header().Set(HeaderPaymentResponse, encoded)
 	return nil
+}
+
+// SetPaymentRequiredHeader sets payment requirement in the response body (legacy function for 402 responses).
+// Note: This should use WritePaymentRequired instead for proper x402 format.
+func SetPaymentRequiredHeader(w http.ResponseWriter, req x402.PaymentRequirement) error {
+	// For backward compatibility, but WritePaymentRequired is preferred
+	return WritePaymentRequired(w, req)
 }
 
 // WritePaymentRequired writes a 402 Payment Required response with proper x402 format.
 func WritePaymentRequired(w http.ResponseWriter, req x402.PaymentRequirement) error {
-	if err := SetPaymentRequiredHeader(w, req); err != nil {
-		return err
-	}
-
 	// Create proper x402 response body according to specification
 	response := x402.PaymentRequirementsResponse{
 		X402Version: 1,
-		Error:       "X-PAYMENT header is required",
+		Error:       "Payment required for this resource",
 		Accepts:     []x402.PaymentRequirement{req},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusPaymentRequired)
 	return sonic.ConfigDefault.NewEncoder(w).Encode(response)
+}
+
+// EncodeSettlement encodes a settlement response as a base64 JSON string.
+func EncodeSettlement(settlement x402.SettlementResponse) (string, error) {
+	jsonBytes, err := sonic.Marshal(settlement)
+	if err != nil {
+		return "", fmt.Errorf("marshal settlement response: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(jsonBytes), nil
+}
+
+// DecodeSettlement decodes a base64 JSON settlement response string.
+func DecodeSettlement(encoded string) (*x402.SettlementResponse, error) {
+	jsonBytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("decode base64: %w", err)
+	}
+
+	var settlement x402.SettlementResponse
+	if err := sonic.Unmarshal(jsonBytes, &settlement); err != nil {
+		return nil, fmt.Errorf("unmarshal settlement response: %w", err)
+	}
+
+	return &settlement, nil
 }
 
 // BasicPaymentCheck performs basic validation that a payment matches a requirement.

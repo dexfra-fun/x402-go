@@ -25,6 +25,8 @@ type PaymentResult struct {
 	PaymentInfo *localx402.PaymentInfo
 	// Payer is the address of the payer (after successful verification)
 	Payer string
+	// Settlement contains the settlement response (if payment was settled)
+	Settlement *x402.SettlementResponse
 }
 
 // Handler encapsulates common payment processing logic.
@@ -156,14 +158,38 @@ func (h *Handler) verifyAndSettle(
 	}
 
 	// Step 2: Verify payment with facilitator
+	payer, err := h.verifyPayment(ctx, payment, requirement)
+	if err != nil {
+		return *err
+	}
+
+	// Step 3: Settle payment SYNCHRONOUSLY
+	settlement, err := h.settlePayment(ctx, payment, requirement, payer)
+	if err != nil {
+		return *err
+	}
+
+	// Step 4: Return success with settlement info
+	return PaymentResult{
+		RequirementNeeded: false,
+		PaymentInfo:       paymentInfo,
+		Payer:             payer,
+		Settlement:        settlement,
+	}
+}
+
+// verifyPayment verifies payment with the facilitator.
+func (h *Handler) verifyPayment(
+	ctx context.Context,
+	payment *x402.PaymentPayload,
+	requirement *x402.PaymentRequirement,
+) (string, *PaymentResult) {
 	isValid, invalidReason, payer, err := h.middleware.GetFacilitator().Verify(
-		ctx,
-		*payment,
-		*requirement,
+		ctx, *payment, *requirement,
 	)
 	if err != nil {
 		h.config.Logger.Errorf("[x402-common] Failed to verify payment: %v", err)
-		return PaymentResult{
+		return "", &PaymentResult{
 			Error:        err,
 			ErrorMessage: "Payment verification error",
 			StatusCode:   http.StatusInternalServerError,
@@ -172,7 +198,7 @@ func (h *Handler) verifyAndSettle(
 
 	if !isValid {
 		h.config.Logger.Errorf("[x402-common] Payment verification failed: %s", invalidReason)
-		return PaymentResult{
+		return "", &PaymentResult{
 			Error:        localx402.ErrPaymentVerificationFailed,
 			ErrorMessage: "Payment verification failed: " + invalidReason,
 			StatusCode:   http.StatusPaymentRequired,
@@ -180,38 +206,38 @@ func (h *Handler) verifyAndSettle(
 	}
 
 	h.config.Logger.Printf("[x402-common] Payment verified: payer=%s", payer)
-
-	// Step 3: Settle payment asynchronously
-	go h.settlePaymentAsync(*payment, *requirement)
-
-	// Step 4: Return success
-	return PaymentResult{
-		RequirementNeeded: false,
-		PaymentInfo:       paymentInfo,
-		Payer:             payer,
-	}
+	return payer, nil
 }
 
-// settlePaymentAsync settles payment in the background.
-func (h *Handler) settlePaymentAsync(
-	payment x402.PaymentPayload,
-	requirement x402.PaymentRequirement,
-) {
-	settlementCtx := context.Background()
-	settlement, err := h.middleware.GetFacilitator().Settle(
-		settlementCtx,
-		payment,
-		requirement,
-	)
+// settlePayment settles payment with the facilitator.
+func (h *Handler) settlePayment(
+	ctx context.Context,
+	payment *x402.PaymentPayload,
+	requirement *x402.PaymentRequirement,
+	payer string,
+) (*x402.SettlementResponse, *PaymentResult) {
+	h.config.Logger.Printf("[x402-common] Settling payment: payer=%s", payer)
+	settlement, err := h.middleware.GetFacilitator().Settle(ctx, *payment, *requirement)
 	if err != nil {
 		h.config.Logger.Errorf("[x402-common] Failed to settle payment: %v", err)
-		return
+		return nil, &PaymentResult{
+			Error:        err,
+			ErrorMessage: "Payment settlement error",
+			StatusCode:   http.StatusInternalServerError,
+		}
 	}
+
 	if !settlement.Success {
 		h.config.Logger.Errorf("[x402-common] Settlement failed: %s", settlement.ErrorReason)
-		return
+		return nil, &PaymentResult{
+			Error:        localx402.ErrPaymentVerificationFailed,
+			ErrorMessage: "Settlement failed: " + settlement.ErrorReason,
+			StatusCode:   http.StatusPaymentRequired,
+		}
 	}
-	h.config.Logger.Printf("[x402-common] Payment settled: tx=%s", settlement.Transaction)
+
+	h.config.Logger.Printf("[x402-common] Payment settled successfully: tx=%s", settlement.Transaction)
+	return settlement, nil
 }
 
 // GetConfig returns the handler configuration.

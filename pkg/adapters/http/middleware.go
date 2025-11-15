@@ -60,6 +60,13 @@ func NewMiddleware(config *localx402.Config) func(http.Handler) http.Handler {
 				r = r.WithContext(ctx)
 			}
 
+			// Add X-PAYMENT-RESPONSE header if settlement was successful
+			if result.Settlement != nil {
+				if err := localx402.SetPaymentResponseHeader(w, *result.Settlement); err != nil {
+					config.Logger.Errorf("[x402-http] Failed to set payment response header: %v", err)
+				}
+			}
+
 			// Payment verified (or free endpoint) - proceed with request
 			next.ServeHTTP(w, r)
 		})
