@@ -75,15 +75,27 @@ func (h *Handler) ProcessPayment(
 		}
 	}
 
-	// Step 3: Check if payment was provided
-	payment, err := localx402.ParsePaymentHeader(r)
-	if err != nil {
+	// Step 3: Check if payment header exists
+	paymentHeader := r.Header.Get(localx402.HeaderPayment)
+	if paymentHeader == "" {
 		// No payment provided - return 402 with requirement
-		h.config.Logger.Printf("[x402-common] No payment provided: %v", err)
+		h.config.Logger.Printf("[x402-common] No payment header provided")
 		return PaymentResult{
 			RequirementNeeded: true,
 			Requirement:       requirement,
 			PaymentInfo:       paymentInfo,
+		}
+	}
+
+	// Step 4: Decode and validate payment header
+	payment, err := localx402.DecodePaymentPayload(paymentHeader)
+	if err != nil {
+		// Invalid/malformed payment header - return 400 Bad Request
+		h.config.Logger.Printf("[x402-common] Invalid payment header: %v", err)
+		return PaymentResult{
+			Error:        err,
+			ErrorMessage: "Invalid payment header",
+			StatusCode:   http.StatusBadRequest,
 		}
 	}
 
@@ -129,11 +141,12 @@ func (h *Handler) ProcessPaymentWithHeader(
 	// Step 4: Decode payment
 	payment, err := localx402.DecodePaymentPayload(paymentHeader)
 	if err != nil {
-		h.config.Logger.Printf("[x402-common] Failed to decode payment: %v", err)
+		// Invalid/malformed payment header - return 400 Bad Request
+		h.config.Logger.Printf("[x402-common] Invalid payment header: %v", err)
 		return PaymentResult{
-			RequirementNeeded: true,
-			Requirement:       requirement,
-			PaymentInfo:       paymentInfo,
+			Error:        err,
+			ErrorMessage: "Invalid payment header",
+			StatusCode:   http.StatusBadRequest,
 		}
 	}
 
