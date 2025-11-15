@@ -20,16 +20,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// SimpleLogger implements x402 Logger interface with standard log package
+// SimpleLogger implements x402 Logger interface with standard log package.
 type SimpleLogger struct{}
 
-// Printf logs informational messages
-func (l *SimpleLogger) Printf(format string, v ...any) {
+// Printf logs informational messages.
+func (*SimpleLogger) Printf(format string, v ...any) {
 	log.Printf(format, v...)
 }
 
-// Errorf logs error messages
-func (l *SimpleLogger) Errorf(format string, v ...any) {
+// Errorf logs error messages.
+func (*SimpleLogger) Errorf(format string, v ...any) {
 	log.Printf("[ERROR] "+format, v...)
 }
 

@@ -205,20 +205,18 @@ type VerifyResult struct {
 	Payer         string
 }
 
-// Verify verifies a payment with the facilitator.
-func (c *FacilitatorClient) Verify(
+// buildVerifyRequest creates the HTTP request for payment verification.
+func (c *FacilitatorClient) buildVerifyRequest(
 	ctx context.Context,
 	payment x402.PaymentPayload,
 	requirement x402.PaymentRequirement,
-) (bool, string, string, error) {
+) (*http.Request, error) {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {
-		return false, "", "", fmt.Errorf("parse facilitator URL: %w", err)
+		return nil, fmt.Errorf("parse facilitator URL: %w", err)
 	}
-
 	u.Path = path.Join(u.Path, "verify")
 
-	// Create request body matching facilitator API spec
 	reqBody := map[string]any{
 		"x402Version":         1,
 		"paymentPayload":      payment,
@@ -227,36 +225,22 @@ func (c *FacilitatorClient) Verify(
 
 	jsonBytes, err := sonic.Marshal(reqBody)
 	if err != nil {
-		return false, "", "", fmt.Errorf("marshal request: %w", err)
+		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-
-	// LOG: Debug request being sent
 	c.logger.Printf("[x402] Verify request: %s", string(jsonBytes))
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		u.String(),
-		strings.NewReader(string(jsonBytes)),
-	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), strings.NewReader(string(jsonBytes)))
 	if err != nil {
-		return false, "", "", fmt.Errorf("create request: %w", err)
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	return req, nil
+}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return false, "", "", fmt.Errorf("http request: %w", err)
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
-		}
-	}()
-
+// parseVerifyResponse decodes and processes the verification response.
+func (c *FacilitatorClient) parseVerifyResponse(resp *http.Response, payment x402.PaymentPayload) (bool, string, string, error) {
 	if resp.StatusCode != http.StatusOK {
-		// LOG: Debug error response
 		c.logger.Printf("[x402] Verify failed: status=%s", resp.Status)
 		return false, "", "", fmt.Errorf("unexpected status %s", resp.Status)
 	}
@@ -270,17 +254,39 @@ func (c *FacilitatorClient) Verify(
 		return false, "", "", fmt.Errorf("decode json: %w", err)
 	}
 
-	// LOG: Debug response received
 	c.logger.Printf("[x402] Verify response: isValid=%v payer=%s invalidReason=%s",
 		result.IsValid, result.Payer, result.InvalidReason)
 
-	// Fallback: If facilitator didn't return payer, extract from payment
 	if result.Payer == "" && result.IsValid {
 		result.Payer = extractPayerFromPayment(payment)
 		c.logger.Printf("[x402] Payer fallback: %s", result.Payer)
 	}
 
 	return result.IsValid, result.InvalidReason, result.Payer, nil
+}
+
+// Verify verifies a payment with the facilitator.
+func (c *FacilitatorClient) Verify(
+	ctx context.Context,
+	payment x402.PaymentPayload,
+	requirement x402.PaymentRequirement,
+) (bool, string, string, error) {
+	req, err := c.buildVerifyRequest(ctx, payment, requirement)
+	if err != nil {
+		return false, "", "", err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false, "", "", fmt.Errorf("http request: %w", err)
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Errorf("[x402] Error closing response body: %v", closeErr)
+		}
+	}()
+
+	return c.parseVerifyResponse(resp, payment)
 }
 
 // Settle settles a payment with the facilitator.
