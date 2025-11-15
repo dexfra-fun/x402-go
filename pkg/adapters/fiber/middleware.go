@@ -36,7 +36,7 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 		})
 
 		// Get payment header
-		paymentHeader := string(c.Request().Header.Peek("X-402-Payment"))
+		paymentHeader := string(c.Request().Header.Peek("X-PAYMENT"))
 
 		// Process payment
 		result := handler.ProcessPaymentWithHeader(c.Context(), resource, paymentHeader)
@@ -50,24 +50,30 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 
 		// Handle payment required
 		if result.RequirementNeeded {
-			// Set payment requirement headers
-			c.Set("X-402-Version", "1")
-			c.Set("X-402-Network", config.Network)
-			c.Set("X-402-Recipient", config.RecipientAddress)
-			if result.PaymentInfo != nil {
-				c.Set("X-402-Amount", result.PaymentInfo.Amount.String())
-				c.Set("X-402-Currency", result.PaymentInfo.Currency)
+			// Return proper x402 format response
+			response := map[string]any{
+				"x402Version": 1,
+				"error":       "Payment required for this resource",
+				"accepts":     []any{result.Requirement},
 			}
 
-			return c.Status(fiber.StatusPaymentRequired).JSON(fiber.Map{
-				"error":   "Payment required",
-				"network": config.Network,
-			})
+			c.Set("Content-Type", "application/json")
+			return c.Status(fiber.StatusPaymentRequired).JSON(response)
 		}
 
 		// Store payment info in context
 		if result.PaymentInfo != nil {
 			c.Locals(paymentInfoKey, result.PaymentInfo)
+		}
+
+		// Add X-PAYMENT-RESPONSE header if settlement was successful
+		if result.Settlement != nil {
+			encoded, err := x402.EncodeSettlement(*result.Settlement)
+			if err != nil {
+				config.Logger.Errorf("[x402-fiber] Failed to encode settlement: %v", err)
+			} else {
+				c.Set("X-Payment-Response", encoded)
+			}
 		}
 
 		// Payment verified (or free endpoint) - proceed with request

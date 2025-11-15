@@ -56,6 +56,13 @@ func NewMiddleware(config *localx402.Config) gin.HandlerFunc {
 			c.Set(paymentInfoKey, result.PaymentInfo)
 		}
 
+		// Add X-PAYMENT-RESPONSE header if settlement was successful
+		if result.Settlement != nil {
+			if err := localx402.SetPaymentResponseHeader(c.Writer, *result.Settlement); err != nil {
+				config.Logger.Errorf("[x402-gin] Failed to set payment response header: %v", err)
+			}
+		}
+
 		// Payment verified (or free endpoint) - proceed with request
 		c.Next()
 	}
