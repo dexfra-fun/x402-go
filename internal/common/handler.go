@@ -204,8 +204,8 @@ func (h *Handler) verifyPayment(
 		h.config.Logger.Errorf("[x402-common] Failed to verify payment: %v", err)
 		return "", &PaymentResult{
 			Error:        err,
-			ErrorMessage: "Payment verification error",
-			StatusCode:   http.StatusInternalServerError,
+			ErrorMessage: "Payment verification failed",
+			StatusCode:   http.StatusServiceUnavailable,
 		}
 	}
 
@@ -235,8 +235,8 @@ func (h *Handler) settlePayment(
 		h.config.Logger.Errorf("[x402-common] Failed to settle payment: %v", err)
 		return nil, &PaymentResult{
 			Error:        err,
-			ErrorMessage: "Payment settlement error",
-			StatusCode:   http.StatusInternalServerError,
+			ErrorMessage: "Payment settlement failed",
+			StatusCode:   http.StatusServiceUnavailable,
 		}
 	}
 

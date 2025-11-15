@@ -146,6 +146,21 @@ func (c *FacilitatorClient) fetchFeePayer(
 	return feePayer, found, nil
 }
 
+// extractPayerFromPayment attempts to extract the payer address from payment payload.
+// This is a fallback for when facilitator doesn't return the payer field.
+func extractPayerFromPayment(payment x402.PaymentPayload) string {
+	// For EVM payments, extract from authorization.from
+	if payload, ok := payment.Payload.(map[string]any); ok {
+		if auth, ok := payload["authorization"].(map[string]any); ok {
+			if from, ok := auth["from"].(string); ok {
+				return from
+			}
+		}
+	}
+	// For other payment types or if extraction fails, return empty string
+	return ""
+}
+
 // GetSupported fetches all supported payment kinds from the facilitator.
 func (c *FacilitatorClient) GetSupported(ctx context.Context) ([]Kind, error) {
 	u, err := url.Parse(c.baseURL)
@@ -203,16 +218,20 @@ func (c *FacilitatorClient) Verify(
 
 	u.Path = path.Join(u.Path, "verify")
 
-	// Create request body
+	// Create request body matching facilitator API spec
 	reqBody := map[string]any{
-		"payment":     payment,
-		"requirement": requirement,
+		"x402Version":         1,
+		"paymentPayload":      payment,
+		"paymentRequirements": requirement,
 	}
 
 	jsonBytes, err := sonic.Marshal(reqBody)
 	if err != nil {
 		return false, "", "", fmt.Errorf("marshal request: %w", err)
 	}
+
+	// LOG: Debug request being sent
+	c.logger.Printf("[x402] Verify request: %s", string(jsonBytes))
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -237,6 +256,8 @@ func (c *FacilitatorClient) Verify(
 	}()
 
 	if resp.StatusCode != http.StatusOK {
+		// LOG: Debug error response
+		c.logger.Printf("[x402] Verify failed: status=%s", resp.Status)
 		return false, "", "", fmt.Errorf("unexpected status %s", resp.Status)
 	}
 
@@ -247,6 +268,16 @@ func (c *FacilitatorClient) Verify(
 	}
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return false, "", "", fmt.Errorf("decode json: %w", err)
+	}
+
+	// LOG: Debug response received
+	c.logger.Printf("[x402] Verify response: isValid=%v payer=%s invalidReason=%s",
+		result.IsValid, result.Payer, result.InvalidReason)
+
+	// Fallback: If facilitator didn't return payer, extract from payment
+	if result.Payer == "" && result.IsValid {
+		result.Payer = extractPayerFromPayment(payment)
+		c.logger.Printf("[x402] Payer fallback: %s", result.Payer)
 	}
 
 	return result.IsValid, result.InvalidReason, result.Payer, nil
@@ -265,16 +296,20 @@ func (c *FacilitatorClient) Settle(
 
 	u.Path = path.Join(u.Path, "settle")
 
-	// Create request body
+	// Create request body matching facilitator API spec
 	reqBody := map[string]any{
-		"payment":     payment,
-		"requirement": requirement,
+		"x402Version":         1,
+		"paymentPayload":      payment,
+		"paymentRequirements": requirement,
 	}
 
 	jsonBytes, err := sonic.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
+
+	// LOG: Debug request being sent
+	c.logger.Printf("[x402] Settle request: %s", string(jsonBytes))
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -299,6 +334,8 @@ func (c *FacilitatorClient) Settle(
 	}()
 
 	if resp.StatusCode != http.StatusOK {
+		// LOG: Debug error response
+		c.logger.Printf("[x402] Settle failed: status=%s", resp.Status)
 		return nil, fmt.Errorf("unexpected status %s", resp.Status)
 	}
 
@@ -306,6 +343,9 @@ func (c *FacilitatorClient) Settle(
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&settlement); err != nil {
 		return nil, fmt.Errorf("decode json: %w", err)
 	}
+
+	// LOG: Debug response received
+	c.logger.Printf("[x402] Settle response: txHash=%s", settlement.Transaction)
 
 	return &settlement, nil
 }

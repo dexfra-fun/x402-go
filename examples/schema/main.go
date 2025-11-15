@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"time"
 
 	x402 "github.com/dexfra-fun/x402-go"
 	ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
@@ -14,9 +15,23 @@ import (
 	"github.com/dexfra-fun/x402-go/pkg/resource"
 	"github.com/dexfra-fun/x402-go/pkg/schema"
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
+
+// SimpleLogger implements x402 Logger interface with standard log package
+type SimpleLogger struct{}
+
+// Printf logs informational messages
+func (l *SimpleLogger) Printf(format string, v ...any) {
+	log.Printf(format, v...)
+}
+
+// Errorf logs error messages
+func (l *SimpleLogger) Errorf(format string, v ...any) {
+	log.Printf("[ERROR] "+format, v...)
+}
 
 const (
 	httpStatusOK         = 200
@@ -161,6 +176,7 @@ func getConfig() (*localx402.Config, error) {
 		PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.3")),
 		SchemaProvider:   schemaProvider,   // Add schema provider
 		ResourceProvider: resourceProvider, // Add resource provider
+		Logger:           &SimpleLogger{},  // Enable detailed logging
 	}, nil
 }
 
@@ -228,6 +244,15 @@ func setupRoutes(r *gin.Engine, config *localx402.Config) {
 
 func main() {
 	r := gin.Default()
+	r.Use(cors.New(
+		cors.Config{
+			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "access-control-expose-headers", "x-payment"},
+			AllowCredentials: false,
+			MaxAge:           12 * time.Hour, //nolint:mnd // example cache duration
+			AllowAllOrigins:  true,
+		}),
+	)
 
 	// Get configuration with schema support
 	config, err := getConfig()
