@@ -5,13 +5,17 @@ import (
 	"context"
 	"net/http"
 
+	x402 "github.com/dexfra-fun/x402-go"
 	"github.com/dexfra-fun/x402-go/internal/common"
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 )
 
 type contextKey string
 
-const paymentInfoKey contextKey = "x402_payment_info"
+const (
+	paymentInfoKey    contextKey = "x402_payment_info"
+	settlementInfoKey contextKey = "x402_settlement_info"
+)
 
 // NewMiddleware creates a new Chi middleware for x402 payment handling.
 func NewMiddleware(config *localx402.Config) func(http.Handler) http.Handler {
@@ -54,18 +58,21 @@ func NewMiddleware(config *localx402.Config) func(http.Handler) http.Handler {
 			}
 
 			// Store payment info in request context
+			ctx := r.Context()
 			if result.PaymentInfo != nil {
-				ctx := r.Context()
 				ctx = context.WithValue(ctx, paymentInfoKey, result.PaymentInfo)
-				r = r.WithContext(ctx)
 			}
 
-			// Add X-PAYMENT-RESPONSE header if settlement was successful
+			// Store settlement info in context and add X-PAYMENT-RESPONSE header
 			if result.Settlement != nil {
+				ctx = context.WithValue(ctx, settlementInfoKey, result.Settlement)
 				if err := localx402.SetPaymentResponseHeader(w, *result.Settlement); err != nil {
 					config.Logger.Errorf("[x402-chi] Failed to set payment response header: %v", err)
 				}
 			}
+
+			// Update request with new context
+			r = r.WithContext(ctx)
 
 			// Payment verified (or free endpoint) - proceed with request
 			next.ServeHTTP(w, r)
@@ -76,5 +83,12 @@ func NewMiddleware(config *localx402.Config) func(http.Handler) http.Handler {
 // GetPaymentInfo retrieves payment information from the request context.
 func GetPaymentInfo(ctx context.Context) (*localx402.PaymentInfo, bool) {
 	info, ok := ctx.Value(paymentInfoKey).(*localx402.PaymentInfo)
+	return info, ok
+}
+
+// GetSettlementInfo retrieves settlement information from the request context.
+// This includes the payer address, transaction hash, and network information.
+func GetSettlementInfo(ctx context.Context) (*x402.SettlementResponse, bool) {
+	info, ok := ctx.Value(settlementInfoKey).(*x402.SettlementResponse)
 	return info, ok
 }

@@ -180,66 +180,78 @@ func getConfig() (*localx402.Config, error) {
 	}, nil
 }
 
-func setupRoutes(r *gin.Engine, config *localx402.Config) {
-	// Free endpoint - no payment required
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(httpStatusOK, gin.H{
-			"status": "ok",
-		})
-	})
+func logPaymentInfo(c *gin.Context) {
+	if settlement, exists := ginx402.GetSettlementInfo(c); exists {
+		log.Printf("[Payment] Payer: %s, Network: %s, Transaction: %s",
+			settlement.Payer, settlement.Network, settlement.Transaction)
+	}
+}
 
-	// Protected endpoints with schema
+func setupRoutes(r *gin.Engine, config *localx402.Config) {
+	r.GET("/health", healthHandler)
+
 	protected := r.Group("/")
 	protected.Use(ginx402.NewMiddleware(config))
 	{
-		// Twitter followers endpoint (GET with query params)
-		protected.GET("/twitter/user/followers", func(c *gin.Context) {
-			userName := c.Query("userName")
-			cursor := c.DefaultQuery("cursor", "")
-			pageSize := c.DefaultQuery("pageSize", "200")
-
-			c.JSON(httpStatusOK, gin.H{
-				"message": "Twitter followers data",
-				"data": gin.H{
-					"userName": userName,
-					"cursor":   cursor,
-					"pageSize": pageSize,
-					"followers": []gin.H{
-						{"id": "123", "username": "user1", "followedAt": "2024-01-01T00:00:00Z"},
-						{"id": "456", "username": "user2", "followedAt": "2024-01-02T00:00:00Z"},
-					},
-				},
-			})
-		})
-
-		// Data submission endpoint (POST with body)
-		protected.POST("/api/data", func(c *gin.Context) {
-			var body map[string]any
-			if err := c.BindJSON(&body); err != nil {
-				c.JSON(httpStatusBadRequest, gin.H{"error": "Invalid request body"})
-				return
-			}
-
-			c.JSON(httpStatusOK, gin.H{
-				"message": "Data processed successfully",
-				"results": []string{"result1", "result2"},
-				"total":   defaultResultCount,
-			})
-		})
-
-		// Weather endpoint (GET with enum query param)
-		protected.GET("/api/weather", func(c *gin.Context) {
-			city := c.Query("city")
-			units := c.DefaultQuery("units", "metric")
-
-			c.JSON(httpStatusOK, gin.H{
-				"city":        city,
-				"temperature": sampleTemperature,
-				"units":       units,
-				"description": "Sunny",
-			})
-		})
+		protected.GET("/twitter/user/followers", twitterFollowersHandler)
+		protected.POST("/api/data", dataSubmitHandler)
+		protected.GET("/api/weather", weatherHandler)
 	}
+}
+
+func healthHandler(c *gin.Context) {
+	c.JSON(httpStatusOK, gin.H{"status": "ok"})
+}
+
+func twitterFollowersHandler(c *gin.Context) {
+	logPaymentInfo(c)
+
+	userName := c.Query("userName")
+	cursor := c.DefaultQuery("cursor", "")
+	pageSize := c.DefaultQuery("pageSize", "200")
+
+	c.JSON(httpStatusOK, gin.H{
+		"message": "Twitter followers data",
+		"data": gin.H{
+			"userName": userName,
+			"cursor":   cursor,
+			"pageSize": pageSize,
+			"followers": []gin.H{
+				{"id": "123", "username": "user1", "followedAt": "2024-01-01T00:00:00Z"},
+				{"id": "456", "username": "user2", "followedAt": "2024-01-02T00:00:00Z"},
+			},
+		},
+	})
+}
+
+func dataSubmitHandler(c *gin.Context) {
+	logPaymentInfo(c)
+
+	var body map[string]any
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(httpStatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	c.JSON(httpStatusOK, gin.H{
+		"message": "Data processed successfully",
+		"results": []string{"result1", "result2"},
+		"total":   defaultResultCount,
+	})
+}
+
+func weatherHandler(c *gin.Context) {
+	logPaymentInfo(c)
+
+	city := c.Query("city")
+	units := c.DefaultQuery("units", "metric")
+
+	c.JSON(httpStatusOK, gin.H{
+		"city":        city,
+		"temperature": sampleTemperature,
+		"units":       units,
+		"description": "Sunny",
+	})
 }
 
 func main() {

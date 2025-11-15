@@ -2,15 +2,19 @@
 package fiber
 
 import (
+	x402 "github.com/dexfra-fun/x402-go"
 	"github.com/dexfra-fun/x402-go/internal/common"
-	"github.com/dexfra-fun/x402-go/pkg/x402"
+	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 	"github.com/gofiber/fiber/v2"
 )
 
-const paymentInfoKey = "x402_payment_info"
+const (
+	paymentInfoKey    = "x402_payment_info"
+	settlementInfoKey = "x402_settlement_info"
+)
 
 // NewMiddleware creates a new Fiber middleware for x402 payment handling.
-func NewMiddleware(config *x402.Config) fiber.Handler {
+func NewMiddleware(config *localx402.Config) fiber.Handler {
 	// Create common handler
 	handler, err := common.NewHandler(config)
 	if err != nil {
@@ -24,7 +28,7 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 
 	return func(c *fiber.Ctx) error {
 		// Extract resource from Fiber context
-		resource := x402.Resource{
+		resource := localx402.Resource{
 			Path:   c.Path(),
 			Method: c.Method(),
 			Params: make(map[string]string),
@@ -67,9 +71,10 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 			c.Locals(paymentInfoKey, result.PaymentInfo)
 		}
 
-		// Add X-PAYMENT-RESPONSE header if settlement was successful
+		// Store settlement info in context and add X-PAYMENT-RESPONSE header
 		if result.Settlement != nil {
-			encoded, err := x402.EncodeSettlement(*result.Settlement)
+			c.Locals(settlementInfoKey, result.Settlement)
+			encoded, err := localx402.EncodeSettlement(*result.Settlement)
 			if err != nil {
 				config.Logger.Errorf("[x402-fiber] Failed to encode settlement: %v", err)
 			} else {
@@ -83,10 +88,21 @@ func NewMiddleware(config *x402.Config) fiber.Handler {
 }
 
 // GetPaymentInfo retrieves payment information from the Fiber context.
-func GetPaymentInfo(c *fiber.Ctx) (*x402.PaymentInfo, bool) {
+func GetPaymentInfo(c *fiber.Ctx) (*localx402.PaymentInfo, bool) {
 	if info := c.Locals(paymentInfoKey); info != nil {
-		if paymentInfo, ok := info.(*x402.PaymentInfo); ok {
+		if paymentInfo, ok := info.(*localx402.PaymentInfo); ok {
 			return paymentInfo, true
+		}
+	}
+	return nil, false
+}
+
+// GetSettlementInfo retrieves settlement information from the Fiber context.
+// This includes the payer address, transaction hash, and network information.
+func GetSettlementInfo(c *fiber.Ctx) (*x402.SettlementResponse, bool) {
+	if info := c.Locals(settlementInfoKey); info != nil {
+		if settlement, ok := info.(*x402.SettlementResponse); ok {
+			return settlement, true
 		}
 	}
 	return nil, false
