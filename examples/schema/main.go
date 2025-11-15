@@ -11,6 +11,7 @@ import (
 	x402 "github.com/dexfra-fun/x402-go"
 	ginx402 "github.com/dexfra-fun/x402-go/pkg/adapters/gin"
 	"github.com/dexfra-fun/x402-go/pkg/pricing"
+	"github.com/dexfra-fun/x402-go/pkg/resource"
 	"github.com/dexfra-fun/x402-go/pkg/schema"
 	localx402 "github.com/dexfra-fun/x402-go/pkg/x402"
 	"github.com/gin-gonic/gin"
@@ -124,19 +125,42 @@ func getConfig() (*localx402.Config, error) {
 		facilitatorURL = "https://facilitator.payai.network" // default
 	}
 
+	// Get base URL for resource URLs (optional)
+	baseURL := os.Getenv("X402_BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://api.example.com" // default for demonstration
+	}
+
 	// Create schemas using helper functions
 	schemaProvider := schema.NewPathBased(map[string]*x402.EndpointSchema{
 		"/twitter/user/followers": createTwitterFollowersSchema(),
-		"/api/data":                createDataSubmitSchema(),
-		"/api/weather":             createWeatherSchema(),
+		"/api/data":               createDataSubmitSchema(),
+		"/api/weather":            createWeatherSchema(),
 	}, nil)
+
+	// Create resource provider with custom URLs and descriptions
+	resourceProvider := resource.NewPathBased(map[string]*resource.Metadata{
+		"/twitter/user/followers": {
+			URL:         baseURL + "/twitter/user/followers",
+			Description: "Get Twitter user followers with pagination support",
+		},
+		"/api/data": {
+			URL:         baseURL + "/api/data",
+			Description: "Submit and process data with optional filters",
+		},
+		"/api/weather": {
+			URL:         baseURL + "/api/weather",
+			Description: "Get current weather information for a city",
+		},
+	}, nil, baseURL)
 
 	return &localx402.Config{
 		RecipientAddress: recipientAddress,
 		Network:          network,
 		FacilitatorURL:   facilitatorURL,
 		PricingStrategy:  pricing.NewFixed(decimal.RequireFromString("0.3")),
-		SchemaProvider:   schemaProvider, // Add schema provider
+		SchemaProvider:   schemaProvider,   // Add schema provider
+		ResourceProvider: resourceProvider, // Add resource provider
 	}, nil
 }
 

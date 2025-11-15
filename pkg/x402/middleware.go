@@ -135,11 +135,27 @@ func (m *Middleware) ProcessRequest(
 		return nil, nil, err
 	}
 
+	// Get resource URL and description if ResourceProvider is configured
+	resourceURL := ""
+	description := ""
+	if m.config.ResourceProvider != nil {
+		resourceURL, err = m.config.ResourceProvider.GetResourceURL(ctx, resource)
+		if err != nil {
+			m.config.Logger.Printf("[x402] Failed to get resource URL: %v", err)
+		}
+		description, err = m.config.ResourceProvider.GetDescription(ctx, resource)
+		if err != nil {
+			m.config.Logger.Printf("[x402] Failed to get description: %v", err)
+		}
+	}
+
 	// Create USDC payment requirement
 	requirement, err := x402.NewUSDCPaymentRequirement(x402.USDCRequirementConfig{
 		Chain:            m.chainConfig,
 		Amount:           price.String(),
 		RecipientAddress: m.config.RecipientAddress,
+		Resource:         resourceURL,
+		Description:      description,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("create payment requirement: %w", err)
