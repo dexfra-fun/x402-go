@@ -24,6 +24,13 @@ type SchemaProvider interface {
 	GetSchema(ctx context.Context, resource Resource) (*x402.EndpointSchema, error)
 }
 
+// ResourceProvider defines how to provide resource metadata for payment requirements.
+// This allows customization of the resource URL and description in 402 responses.
+type ResourceProvider interface {
+	GetResourceURL(ctx context.Context, resource Resource) (string, error)
+	GetDescription(ctx context.Context, resource Resource) (string, error)
+}
+
 // Resource represents an API endpoint being accessed.
 type Resource struct {
 	Path   string
@@ -40,11 +47,12 @@ type Config struct {
 	PricingStrategy  PricingStrategy
 
 	// Optional fields
-	SchemaProvider SchemaProvider // Optional: provides schema for API endpoints
-	FeePayer       string         // Optional: fallback fee payer if facilitator doesn't provide one
-	CacheTTL       time.Duration
-	Networks       map[string]NetworkConfig
-	Logger         Logger
+	SchemaProvider   SchemaProvider   // Optional: provides schema for API endpoints
+	ResourceProvider ResourceProvider // Optional: provides resource URL and description for payment requirements
+	FeePayer         string           // Optional: fallback fee payer if facilitator doesn't provide one
+	CacheTTL         time.Duration
+	Networks         map[string]NetworkConfig
+	Logger           Logger
 }
 
 // NetworkConfig defines blockchain network configuration.
